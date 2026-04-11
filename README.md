@@ -1,176 +1,158 @@
-# Document Q&A System
+# DocumentsAnalysis
 
-A prototype system that ingests technical manuals and maintenance documents, indexes them for semantic search, and answers questions using retrieval-augmented generation (RAG).
+A **document Q&A** web application: upload technical manuals and other files, index them with embeddings, and ask questions using **retrieval-augmented generation (RAG)** with **Anthropic Claude**.
+
+**Status:** v1.0-style application stack; **automated tests are not included yet** (see git tag `v1.0.0`).
 
 ## Features
 
-- 📄 **Document Ingestion**: Support for PDF, DOCX, TXT, and Markdown files
-- 🔍 **Semantic Search**: Vector-based similarity search using embeddings
-- 🤖 **AI-Powered Q&A**: Claude LLM integration for intelligent answers
-- 💬 **Chat Interface**: Conversational interface with chat history
-- 🌐 **Web UI**: Modern React-based frontend
-- 🔧 **Configurable PDF Parsing**: Support for both default and advanced PDF parsers
+- **Ingestion** — PDF, DOCX, TXT, and Markdown; configurable PDF backend (`pypdf` or optional advanced parser)
+- **Semantic search** — ChromaDB + sentence-transformers embeddings
+- **Q&A and chat** — Claude answers with retrieved context and citations
+- **Web UI** — React (Vite, TypeScript, Chakra UI): dashboard, document manager, chat
+- **REST API** — FastAPI with OpenAPI docs at `/docs`
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   React     │────▶│   FastAPI   │────▶│   ChromaDB  │
-│   Frontend  │◀────│   Backend   │◀────│  (Vectors)  │
-└─────────────┘     └──────┬──────┘     └─────────────┘
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ React (Vite) │────▶│   FastAPI    │────▶│   ChromaDB   │
+│   frontend   │◀────│   backend    │◀────│   (vectors)  │
+└──────────────┘     └──────┬───────┘     └──────────────┘
                            │
-                    ┌──────┴──────┐
-                    │   Claude    │
-                    │     LLM     │
-                    └─────────────┘
+                    ┌──────▼───────┐
+                    │ Anthropic    │
+                    │ Claude API   │
+                    └──────────────┘
 ```
 
-## Quick Start
+Local data lives under `backend/data/` (vector DB, document metadata, uploaded files). Add `data/` to backups; it is typically gitignored.
 
-### Prerequisites
+## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- Anthropic API key
+- **Python** 3.10+
+- **Node.js** 18+
+- **Anthropic API key** ([Anthropic Console](https://console.anthropic.com/))
 
-### Installation
+## Quick start
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/docqa.git
-cd docqa
-```
+### 1. Backend
 
-2. Set up the backend:
+From the repository root:
+
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Set up the frontend:
-```bash
-cd ../frontend
-npm install
+Create `backend/.env` (minimal example):
+
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-4. Configure environment variables:
-```bash
-cp backend/.env.example backend/.env
-# Edit backend/.env and add your ANTHROPIC_API_KEY
-```
+Optional settings (see `backend/config.py`): `HOST`, `PORT`, `LLM_MODEL`, `EMBEDDING_MODEL`, `PDF_PARSER`, `CORS_ORIGINS`, paths under `./data`, etc.
 
-### Running the Application
+Run the API (from `backend/`):
 
-1. Start the backend server:
 ```bash
-cd backend
-source venv/bin/activate
 uvicorn main:app --reload
 ```
 
-2. Start the frontend development server:
+- API base: `http://localhost:8000`
+- Interactive docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health` or `http://localhost:8000/api/health`
+
+### 2. Frontend
+
 ```bash
 cd frontend
+npm install
+```
+
+Optional: `frontend/.env` with `VITE_API_URL=http://localhost:8000` (defaults to that if unset).
+
+```bash
 npm run dev
 ```
 
-3. Open your browser and navigate to `http://localhost:5173`
+Open **http://localhost:5173**.
 
-## Configuration
+### 3. End-to-end flow
 
-### PDF Parser Options
+1. Upload documents (**Documents** in the UI or `POST /api/documents/`).
+2. Wait until processing completes.
+3. Use **Chat** or the query API to ask questions grounded in your files.
 
-The system supports two PDF parsers:
+More step-by-step detail: **[QUICKSTART.md](QUICKSTART.md)**.
 
-**1. Default (pypdf)**
-- Fast and simple
-- Good for text-based PDFs
-- No additional dependencies
+## Configuration highlights
 
-**2. Advanced (opendataloader-pdf)**
-- Better for complex layouts
-- Handles tables and figures
-- Requires additional installation:
-  ```bash
-  pip install git+https://github.com/yiliangbetter/opendataloader-pdf.git
-  ```
+| Area | Notes |
+|------|--------|
+| **LLM** | `ANTHROPIC_API_KEY` required for query/chat. `LLM_MODEL` defaults in `config.py`. |
+| **Embeddings** | Default `sentence-transformers/all-MiniLM-L6-v2` (downloads on first use). |
+| **PDF** | `PDF_PARSER=pypdf` (default) or `opendataloader` if you install the extra dependency (see `DESIGN.md`). |
+| **CORS** | `CORS_ORIGINS` must include your frontend origin (e.g. `http://localhost:5173`). |
 
-To use the advanced parser, set in your `.env`:
-```
-PDF_PARSER=opendataloader
-```
+## API overview
 
-## API Endpoints
+| Method | Path | Purpose |
+|--------|------|--------|
+| GET | `/health` | Simple health check (includes doc/chunk counts when stores are up) |
+| GET | `/api/health` | API health JSON |
+| GET | `/api/stats` | Document and chunk statistics |
+| GET | `/api/documents/` | List documents |
+| POST | `/api/documents/` | Upload a document (`multipart/form-data`, field `file`) |
+| GET | `/api/documents/{id}` | Document detail |
+| DELETE | `/api/documents/{id}` | Remove document and vectors |
+| GET | `/api/documents/{id}/download` | Download original file |
+| POST | `/api/query` | Single question → answer (RAG) |
+| POST | `/api/search` | Semantic search only (no LLM) |
+| POST | `/api/chat` | Chat message with optional history (RAG) |
 
-### Documents
-- `GET /api/documents` - List all documents
-- `POST /api/documents` - Upload a new document
-- `GET /api/documents/{id}` - Get document details
-- `DELETE /api/documents/{id}` - Delete a document
-- `GET /api/documents/{id}/download` - Download original file
+Full request/response shapes: **http://localhost:8000/docs** (when the backend is running).
 
-### Query
-- `POST /api/query` - Single question → answer
-- `POST /api/search` - Semantic search (no LLM)
-- `POST /api/chat` - Chat with history
-
-### System
-- `GET /api/stats` - System statistics
-- `GET /api/health` - Health check
-
-## Project Structure
+## Repository layout
 
 ```
-docqa/
-├── backend/               # FastAPI Backend
-│   ├── api/              # API routes
-│   ├── core/             # Business logic
-│   ├── storage/          # Data storage
-│   ├── config.py         # Configuration
-│   ├── main.py           # Entry point
+DocumentsAnalysis/
+├── README.md                 # This file
+├── QUICKSTART.md             # Short runbook
+├── DESIGN.md                 # Design and architecture notes
+├── PROJECT.md                # Implementation notes and roadmap-style detail
+├── backend/
+│   ├── main.py               # FastAPI app
+│   ├── config.py             # Settings (env)
+│   ├── api/                  # documents, query, system routes
+│   ├── core/                 # document models, processor, RAG
+│   ├── storage/              # document store, vector store
 │   └── requirements.txt
-├── frontend/              # React Frontend
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API services
-│   │   ├── types/        # TypeScript types
-│   │   └── App.tsx
-│   ├── package.json
-│   └── vite.config.ts
-├── data/                  # Data storage (gitignored)
-└── README.md
+└── frontend/
+    ├── src/
+    │   ├── pages/            # Dashboard, DocumentManager, ChatInterface
+    │   ├── components/
+    │   ├── services/api.ts
+    │   └── types/
+    ├── vite.config.ts
+    └── package.json
 ```
 
-## Technologies Used
+## Tech stack
 
-### Backend
-- **FastAPI**: Web framework
-- **ChromaDB**: Vector database
-- **Sentence Transformers**: Embeddings
-- **Claude (Anthropic)**: LLM for Q&A
-- **Pydantic**: Data validation
+| Layer | Technologies |
+|-------|----------------|
+| Backend | FastAPI, Pydantic Settings, ChromaDB, sentence-transformers, Anthropic SDK, pypdf / python-docx, etc. |
+| Frontend | React 18, TypeScript, Vite, Chakra UI, TanStack Query, Axios, React Router |
 
-### Frontend
-- **React**: UI library
-- **TypeScript**: Type safety
-- **Chakra UI**: Component library
-- **TanStack Query**: Data fetching
-- **React Router**: Navigation
-- **Vite**: Build tool
+## Documentation
 
-## License
-
-MIT License
+- **[QUICKSTART.md](QUICKSTART.md)** — install, run, curl examples  
+- **[DESIGN.md](DESIGN.md)** — product and technical design  
+- **[PROJECT.md](PROJECT.md)** — structure reference and phased checklist  
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Acknowledgments
-
-- Anthropic for the Claude API
-- The ChromaDB team for the vector database
-- The FastAPI team for the excellent web framework
+Issues and pull requests are welcome. Please keep changes focused and consistent with existing patterns in `backend/` and `frontend/`.
