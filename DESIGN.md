@@ -6,22 +6,40 @@ A prototype system that ingests technical manuals and maintenance documents, ind
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Document      │────▶│   Document       │────▶│   Vector        │
-│   Ingestion       │     │   Processor        │     │   Index/Store     │
-│   (PDF/DOCX/TXT)  │     │   (Chunk/Embed)    │     │   (ChromaDB)      │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                                                           │
-┌─────────────────┐     ┌──────────────────┐              │
-│   User Query    │────▶│   Query          │──────────────┘
-│   (Question)    │     │   Engine         │
-└─────────────────┘     └──────────────────┘
-                               │
-                               ▼
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Generated     │◀────│   LLM            │◀────│   Context         │
-│   Answer        │     │   (Claude API)   │     │   (Top-k Chunks)  │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+                    ┌─────────────────────────────────────┐
+                    │           Web Interface             │
+                    │  (React + FastAPI Backend)          │
+                    │  - Document Upload Dashboard        │
+                    │  - Chat Interface                   │
+                    │  - Search & Browse                  │
+                    └──────────────┬──────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────┐
+                    │         FastAPI Backend API         │
+                    │  - /api/documents (CRUD)            │
+                    │  - /api/query (Q&A)                   │
+                    │  - /api/chat (Conversational)       │
+                    └──────────────┬──────────────────────┘
+                                   │
+        ┌──────────────────────────┼──────────────────────────┐
+        │                          │                          │
+┌───────▼────────┐      ┌───────────▼──────────┐    ┌───────────▼──────────┐
+│   Document     │      │   Document           │    │   Vector             │
+│   Ingestion    │──────▶│   Processor          │───▶│   Store/Index        │
+│   (PDF/DOCX)   │      │   (Chunk/Embed)      │    │   (ChromaDB)         │
+└────────────────┘      └──────────────────────┘    └──────────────────────┘
+                                                                  │
+                                                                  │
+        ┌──────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                      RAG Pipeline                                 │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────────────┐  │
+│  │   Query     │───▶│   Context    │───▶│   LLM (Claude)      │  │
+│  │   Embed     │    │   Assembly   │    │   Answer Generation │  │
+│  └─────────────┘    └──────────────┘    └─────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Core Components
@@ -30,6 +48,36 @@ A prototype system that ingests technical manuals and maintenance documents, ind
 - **Purpose**: Accept documents in various formats
 - **Supported Formats**: PDF, DOCX, TXT, Markdown
 - **Key Libraries**: `pypdf`, `python-docx`, `unstructured`
+
+#### PDF Parser Options
+The system supports pluggable PDF parsers via configuration:
+
+**Option 1: Default (pypdf)**
+- **Library**: `pypdf>=4.0.0`
+- **Best for**: Simple text-based PDFs, fast processing
+- **Pros**: Pure Python, no external dependencies, good performance
+- **Cons**: Limited support for complex layouts, tables, scanned PDFs
+
+**Option 2: Advanced (opendataloader-pdf)** ⚙️ Configurable
+- **Repository**: https://github.com/yiliangbetter/opendataloader-pdf
+- **Best for**: Complex technical manuals, tables, mixed layouts
+- **Installation**: 
+  ```bash
+  pip install git+https://github.com/yiliangbetter/opendataloader-pdf.git
+  ```
+- **Configuration**: Set `PDF_PARSER=opendataloader` in `.env`
+- **Pros**: Better handling of complex layouts, tables, figure captions
+- **Cons**: Additional dependency, may be slower for simple PDFs
+
+**Parser Selection Logic**:
+```python
+if config.PDF_PARSER == "opendataloader":
+    from opendataloader_pdf import PDFLoader
+    return PDFLoader()
+else:
+    from pypdf import PdfReader
+    return PyPDFLoader()
+```
 
 ### 2. Document Processor
 - **Text Extraction**: Extract clean text from documents
@@ -70,170 +118,145 @@ A prototype system that ingests technical manuals and maintenance documents, ind
   Answer:
   ```
 
-## Data Model
+## Web Interface
 
-### Document
+### Frontend (React + TypeScript)
+
+#### Pages & Components
+
+1. **Dashboard (`/`)**
+   - Document statistics (total docs, chunks, recent uploads)
+   - Quick upload button
+   - Recent queries history
+   - Quick search bar
+
+2. **Document Manager (`/documents`)**
+   - List view: Document cards with metadata (title, type, date, size)
+   - Upload zone: Drag-and-drop multi-file upload
+   - Actions: View, Download, Delete
+   - Filters: By type, date range, search by title
+
+3. **Chat Interface (`/chat`)**
+   - Chat-style interface (similar to ChatGPT)
+   - Message history with user questions and AI answers
+   - Source citations (expandable to see which documents were used)
+   - Follow-up question suggestions
+   - Clear conversation button
+
+4. **Search & Browse (`/search`)**
+   - Advanced search with filters
+   - Highlighted results with context snippets
+   - Faceted search (by document, date, type)
+
+#### Technology Stack
+
+```
+Frontend:
+- React 18 + TypeScript
+- Vite (build tool)
+- Chakra UI or Tailwind CSS (component library)
+- React Query (server state management)
+- React Router (routing)
+- Axios (HTTP client)
+```
+
+### Backend API (FastAPI)
+
+#### REST Endpoints
+
 ```python
-class Document:
-    id: str  # UUID
+# Documents
+GET    /api/documents              # List all documents
+POST   /api/documents              # Upload document(s)
+GET    /api/documents/{id}         # Get document details
+DELETE /api/documents/{id}         # Delete document
+GET    /api/documents/{id}/download # Download original file
+
+# Query/Chat
+POST   /api/query                  # Single question → answer
+POST   /api/chat                   # Chat with history
+POST   /api/search                 # Semantic search (no LLM)
+
+# System
+GET    /api/stats                  # System stats (doc count, etc.)
+GET    /api/health                 # Health check
+```
+
+#### WebSocket Support (Optional)
+- `/ws/chat` - Real-time streaming responses for chat
+
+#### Technology Stack
+
+```
+Backend:
+- FastAPI (web framework)
+- Uvicorn (ASGI server)
+- Pydantic (validation)
+- Python-multipart (file uploads)
+- WebSocket support for streaming
+```
+
+### Shared Models (Pydantic)
+
+```python
+# Request/Response Models
+class DocumentUploadResponse(BaseModel):
+    id: str
     title: str
-    source_path: str
-    doc_type: str  # pdf, docx, txt, etc.
-    created_at: datetime
-    metadata: Dict[str, Any]  # author, date, etc.
+    status: "processing" | "completed" | "failed"
+
+class QueryRequest(BaseModel):
+    question: str
+    top_k: int = 5
+    filters: dict | None = None
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: list[SourceCitation]
+    confidence: float
+
+class ChatRequest(BaseModel):
+    message: str
+    conversation_id: str | None = None  # For continuing chats
+    history: list[ChatMessage] | None = None
+
+class ChatResponse(BaseModel):
+    message: str
+    sources: list[SourceCitation]
+    conversation_id: str
 ```
 
-### DocumentChunk
-```python
-class DocumentChunk:
-    id: str  # UUID
-    document_id: str
-    text: str
-    chunk_index: int
-    start_char: int
-    end_char: int
-    embedding: List[float]  # 384-dimensional vector
-```
+## Updated Project Structure
 
-## API/Interface Design
+See `PROJECT.md` for detailed project structure, implementation phases, dependencies, and configuration.
 
-### Command-Line Interface (CLI)
-```bash
-# Ingest documents
-python -m docqa ingest /path/to/manuals/*.pdf
+## Summary of Web Interface Features
 
-# Query
-python -m docqa query "How do I reset the password on Model X?"
+| Feature | Description |
+|---------|-------------|
+| **Dashboard** | Overview stats, quick upload, recent queries |
+| **Document Manager** | Upload, view, delete documents; drag-and-drop support |
+| **Chat Interface** | ChatGPT-style Q&A with source citations |
+| **Search & Browse** | Advanced semantic search with filters |
+| **Real-time** | WebSocket streaming for chat responses |
 
-# List documents
-python -m docqa list
+## API Endpoints Summary
 
-# Delete document
-python -m docqa delete <doc_id>
-```
-
-### Python API
-```python
-from docqa import DocumentQA
-
-qa = DocumentQA()
-
-# Ingest
-qa.ingest("/path/to/manual.pdf")
-
-# Query
-response = qa.query("How do I perform maintenance?")
-print(response.answer)
-print(response.sources)  # Source documents
-```
-
-## Project Structure
-
-```
-docqa/
-├── README.md
-├── requirements.txt
-├── DESIGN.md
-├── config.py          # Configuration settings
-├── __init__.py
-├── cli.py             # Command-line interface
-├── core/
-│   ├── __init__.py
-│   ├── document.py    # Document models
-│   ├── processor.py   # Text extraction & chunking
-│   ├── indexer.py     # Vector indexing
-│   └── rag.py         # Retrieval + Generation
-├── storage/
-│   ├── __init__.py
-│   ├── vector_store.py   # ChromaDB wrapper
-│   └── document_store.py # Metadata storage
-└── utils/
-    ├── __init__.py
-    └── helpers.py
-```
-
-## Implementation Phases
-
-### Phase 1: Core Infrastructure
-- [ ] Project setup (requirements, structure)
-- [ ] Document models and data classes
-- [ ] Configuration management
-
-### Phase 2: Ingestion Pipeline
-- [ ] Document loaders (PDF, DOCX, TXT)
-- [ ] Text extraction
-- [ ] Metadata extraction
-
-### Phase 3: Processing & Indexing
-- [ ] Text chunking with overlap
-- [ ] Embedding generation
-- [ ] ChromaDB integration
-- [ ] Vector storage
-
-### Phase 4: Query & RAG
-- [ ] Similarity search
-- [ ] Context assembly
-- [ ] Claude API integration
-- [ ] Answer generation
-
-### Phase 5: Interface
-- [ ] CLI implementation
-- [ ] Python API
-- [ ] Documentation
-
-## Dependencies
-
-```txt
-# Core
-pydantic>=2.0.0
-python-dotenv>=1.0.0
-
-# Document Processing
-pypdf>=4.0.0
-python-docx>=1.1.0
-unstructured>=0.12.0
-
-# Embeddings & Vector DB
-sentence-transformers>=2.5.0
-chromadb>=0.4.0
-
-# LLM
-anthropic>=0.18.0
-
-# CLI
-click>=8.1.0
-rich>=13.0.0
-
-# Utilities
-tqdm>=4.66.0
-```
-
-## Configuration
-
-Environment variables in `.env`:
-```bash
-# LLM Configuration
-ANTHROPIC_API_KEY=your_key_here
-LLM_MODEL=claude-3-sonnet-20240229
-
-# Vector Store
-VECTOR_DB_PATH=./data/vector_db
-
-# Processing
-CHUNK_SIZE=512
-CHUNK_OVERLAP=50
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-
-# Search
-TOP_K_RETRIEVAL=5
-SIMILARITY_THRESHOLD=0.7
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/documents` | List documents |
+| POST | `/api/documents` | Upload document(s) |
+| DELETE | `/api/documents/{id}` | Delete document |
+| POST | `/api/query` | Single question → answer |
+| POST | `/api/chat` | Chat with history |
+| POST | `/api/search` | Semantic search |
+| GET | `/api/stats` | System statistics |
 
 ---
 
 ## Next Steps
 
-1. **Review this design** - Provide feedback on architecture, features, or priorities
+1. **Review the updated design** - Provide feedback on the web interface, API design, or features
 2. **Approve the design** - I'll proceed with Phase 1 implementation
 3. **Request modifications** - Change scope, add features, or adjust priorities
 
