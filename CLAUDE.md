@@ -1,5 +1,23 @@
 # Claude Code Project Guidelines
 
+## Tooling (use without asking)
+
+For work in this repository, you may use the following **without** prompting the user for approval each time (subject to normal safety: no destructive git history rewrites unless requested, no secret exfiltration, etc.):
+
+| Tool / capability | Typical use here |
+|-------------------|------------------|
+| **git** | status, diff, log, add, commit, branch; push only when the user asks |
+| **websearch** | Look up docs, API changes, error messages, library versions |
+| **WebFetch** | Fetch a specific URL for documentation or reference material |
+| **python** | Run backend scripts, tests (`pytest`), one-off checks, `pip` installs in venv |
+| **npm** | `npm install`, `npm run dev`, `npm test`, `npm run build` in `frontend/` |
+| **chmod** | Fix execute bits on shell scripts (e.g. `start_*.sh`) when needed |
+| **Shell scripts (`.sh`)** | Run any shell script in this repo when it helps (startup, automation, local tooling). **Broad:** `bash …` / `sh …` (pre-approved). **Root `start_*.sh`:** `./start_…` is pre-approved (e.g. `start_application.sh`, `start_servers.sh`); use `chmod +x` if needed. **Other paths** (e.g. `scripts/foo.sh`): use `bash scripts/foo.sh`, or extend `.claude/settings.local.json` with a matching `Bash(…)` rule if you need bare `./` without `bash`. |
+
+If a command is unusually destructive (e.g. `git push --force`, `rm -rf` outside ignored artifacts), confirm with the user first.
+
+**Enforcement in Claude Code:** `.claude/settings.local.json` mirrors this with `permissions.allow` / `permissions.deny`. `git push` is denied there so pushes still require explicit handling. Shell coverage: `Bash(bash *)`, `Bash(sh *)`, and `Bash(./start_*)` for the repo’s `start_*.sh` scripts run as `./…`.
+
 ## Git Commit Workflow
 
 **Rule: Create a git commit after every meaningful step.**
