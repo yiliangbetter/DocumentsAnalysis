@@ -37,7 +37,7 @@ Create a commit after completing:
 
 [optional longer description]
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+please do not use Co-Authored-By
 ```
 
 **Types:**

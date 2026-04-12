@@ -13,9 +13,8 @@ from core.document import (
     DocumentType,
     DocumentUploadResponse,
     ProcessingStatus,
-    get_document_type,
 )
-from core.processor import DocumentProcessor
+from core.processor import DocumentProcessor, get_document_type
 from storage.document_store import DocumentStore
 from storage.vector_store import EmbeddingGenerator, VectorStore
 
