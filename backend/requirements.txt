@@ -23,8 +23,8 @@ python-magic>=0.4.27
 sentence-transformers>=2.5.0
 chromadb>=0.4.0
 
-# LLM
-anthropic>=0.18.0
+# LLM (Kimi K2.5 via OpenAI-compatible API)
+openai>=1.0.0
 
 # Utilities
 tqdm>=4.66.0

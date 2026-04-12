@@ -2,7 +2,7 @@
 import json
 from typing import List, Optional
 
-from anthropic import Anthropic
+import openai
 
 from config import settings
 from core.document import DocumentChunk
@@ -15,10 +15,13 @@ class RAGPipeline:
     def __init__(
         self,
         vector_store: VectorStore,
-        anthropic_client: Optional[Anthropic] = None,
+        openai_client: Optional[openai.OpenAI] = None,
     ):
         self.vector_store = vector_store
-        self.client = anthropic_client or Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = openai_client or openai.OpenAI(
+            api_key=settings.KIMI_API_KEY,
+            base_url=settings.KIMI_BASE_URL
+        )
         self.model = settings.LLM_MODEL
         self.max_tokens = settings.MAX_TOKENS
         self.temperature = settings.TEMPERATURE
@@ -100,26 +103,26 @@ class RAGPipeline:
         return "\n---\n".join(context_parts)
 
     def _generate_answer(self, question: str, context: str) -> str:
-        """Generate answer using Claude."""
-        prompt = f"""You are a technical support assistant. Answer the question based ONLY on the provided context.
-If the context doesn't contain enough information, say "I don't have enough information to answer this."
-Cite specific sources (e.g., "According to Source 1...") when providing information.
+        """Generate answer using Kimi K2.5."""
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a technical support assistant. Answer the question based ONLY on the provided context. If the context doesn't contain enough information, say 'I don't have enough information to answer this.' Cite specific sources (e.g., 'According to Source 1...') when providing information."
+            },
+            {
+                "role": "user",
+                "content": f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+            }
+        ]
 
-Context:
-{context}
-
-Question: {question}
-
-Answer:"""
-
-        response = self.client.messages.create(
+        response = self.client.chat.completions.create(
             model=self.model,
+            messages=messages,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            messages=[{"role": "user", "content": prompt}],
         )
 
-        return response.content[0].text
+        return response.choices[0].message.content
 
     def _format_sources(self, retrieved: List[tuple]) -> List[dict]:
         """Format retrieved chunks as sources."""

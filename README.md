@@ -8,7 +8,7 @@ A **document Q&A** web application: upload technical manuals and other files, in
 
 - **Ingestion** — PDF, DOCX, TXT, and Markdown; configurable PDF backend (`pypdf` or optional advanced parser)
 - **Semantic search** — ChromaDB + sentence-transformers embeddings
-- **Q&A and chat** — Claude answers with retrieved context and citations
+- **Q&A and chat** — Kimi K2.5 answers with retrieved context and citations
 - **Web UI** — React (Vite, TypeScript, Chakra UI): dashboard, document manager, chat
 - **REST API** — FastAPI with OpenAPI docs at `/docs`
 - **Tests** — Pytest for the API and core modules; Vitest for frontend units (see [Testing](#testing))
@@ -22,8 +22,8 @@ A **document Q&A** web application: upload technical manuals and other files, in
 └──────────────┘     └──────┬───────┘     └──────────────┘
                            │
                     ┌──────▼───────┐
-                    │ Anthropic    │
-                    │ Claude API   │
+                    │ Moonshot AI  │
+                    │ Kimi K2.5 API│
                     └──────────────┘
 ```
 
@@ -33,7 +33,7 @@ Local data lives under `backend/data/` (vector DB, document metadata, uploaded f
 
 - **Python** 3.10+
 - **Node.js** 18+
-- **Anthropic API key** ([Anthropic Console](https://console.anthropic.com/))
+- **Kimi API key** ([Moonshot AI Platform](https://platform.moonshot.cn/))
 
 ## Quick start
 
@@ -51,7 +51,7 @@ pip install -r requirements.txt
 Create `backend/.env` (minimal example):
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-api03-...
+KIMI_API_KEY=sk-...
 ```
 
 Optional settings (see `backend/config.py`): `HOST`, `PORT`, `LLM_MODEL`, `EMBEDDING_MODEL`, `PDF_PARSER`, `CORS_ORIGINS`, paths under `./data`, etc.
@@ -178,7 +178,7 @@ DocumentsAnalysis/
 
 | Layer | Technologies |
 |-------|----------------|
-| Backend | FastAPI, Pydantic Settings, ChromaDB, sentence-transformers, Anthropic SDK, pypdf / python-docx, etc. |
+| Backend | FastAPI, Pydantic Settings, ChromaDB, sentence-transformers, OpenAI SDK (for Kimi), pypdf / python-docx, etc. |
 | Frontend | React 18, TypeScript, Vite, Chakra UI, TanStack Query, Axios, React Router |
 | Testing | **Backend:** pytest, pytest-cov, httpx, respx (see `requirements-test.txt`). **Frontend:** Vitest, Testing Library, jsdom. |
 

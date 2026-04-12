@@ -23,9 +23,10 @@ class Settings(BaseSettings):
     # CORS Configuration
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
-    # LLM Configuration
-    ANTHROPIC_API_KEY: Optional[str] = None
-    LLM_MODEL: str = "claude-3-sonnet-20240229"
+    # LLM Configuration (Kimi K2.5)
+    KIMI_API_KEY: Optional[str] = None
+    KIMI_BASE_URL: str = "https://api.moonshot.cn/v1"
+    LLM_MODEL: str = "kimi-k2.5"
     MAX_TOKENS: int = 4096
     TEMPERATURE: float = 0.0
 

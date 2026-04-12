@@ -34,7 +34,8 @@ def test_settings(temp_dir):
         VECTOR_DB_PATH=temp_dir / "vector_db",
         DOCUMENT_STORE_PATH=temp_dir / "documents",
         FILE_STORAGE_PATH=temp_dir / "files",
-        ANTHROPIC_API_KEY="test-api-key",
+        KIMI_API_KEY="test-api-key",
+        KIMI_BASE_URL="https://api.moonshot.cn/v1",
         DEBUG=True,
     )
 
@@ -210,14 +211,16 @@ def sample_docx_bytes():
 
 
 @pytest.fixture
-def mock_anthropic_client():
-    """Create a mock Anthropic client."""
+def mock_kimi_client():
+    """Create a mock Kimi client (OpenAI-compatible)."""
     mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = "This is a test answer from Claude."
-    mock_response.content = [mock_content]
-    mock_client.messages.create.return_value = mock_response
+    mock_choice = MagicMock()
+    mock_message = MagicMock()
+    mock_message.content = "This is a test answer from Kimi K2.5."
+    mock_choice.message = mock_message
+    mock_response.choices = [mock_choice]
+    mock_client.chat.completions.create.return_value = mock_response
     return mock_client
 
 

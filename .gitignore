@@ -1,1 +1,26 @@
 .claude/
+
+# Secrets and local env (never commit)
+.env
+backend/.env
+*.env.local
+
+# Local scratch notes (optional; remove this line if you want TODO.md tracked)
+TODO.md
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.cover
+venv/
+.venv/
+backend/venv/

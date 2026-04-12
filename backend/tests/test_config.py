@@ -82,10 +82,10 @@ class TestSettingsValidation:
         settings = Settings(DATA_DIR=temp_dir, CHUNK_SIZE=-1)
         assert settings.CHUNK_SIZE == -1  # But it accepts the value
 
-    def test_empty_anthropic_key(self, temp_dir):
+    def test_empty_kimi_key(self, temp_dir):
         """Test that empty API key is allowed but warns."""
-        settings = Settings(DATA_DIR=temp_dir, ANTHROPIC_API_KEY=None)
-        assert settings.ANTHROPIC_API_KEY is None
+        settings = Settings(DATA_DIR=temp_dir, KIMI_API_KEY=None)
+        assert settings.KIMI_API_KEY is None
 
     def test_path_as_string(self, temp_dir):
         """Test that string paths are converted to Path objects."""
