@@ -1,8 +1,8 @@
 # DocumentsAnalysis
 
-A **document Q&A** web application: upload technical manuals and other files, index them with embeddings, and ask questions using **retrieval-augmented generation (RAG)** with **Anthropic Claude**.
+A **document Q&A** web application: upload technical manuals and other files, index them with embeddings, and ask questions using **retrieval-augmented generation (RAG)** with a given LLM.
 
-**Status:** v1.0-style application stack; **automated tests are not included yet** (see git tag `v1.0.0`).
+**Status:** The stack includes **automated tests** (backend: pytest; frontend: Vitest). The git tag **`v1.0.0`** marks an earlier snapshot from before tests were added.
 
 ## Features
 
@@ -11,6 +11,7 @@ A **document Q&A** web application: upload technical manuals and other files, in
 - **Q&A and chat** — Claude answers with retrieved context and citations
 - **Web UI** — React (Vite, TypeScript, Chakra UI): dashboard, document manager, chat
 - **REST API** — FastAPI with OpenAPI docs at `/docs`
+- **Tests** — Pytest for the API and core modules; Vitest for frontend units (see [Testing](#testing))
 
 ## Architecture
 
@@ -88,6 +89,34 @@ Open **http://localhost:5173**.
 
 More step-by-step detail: **[QUICKSTART.md](QUICKSTART.md)**.
 
+## Testing
+
+### Backend (pytest)
+
+From `backend/`, install app + test dependencies, then run the suite:
+
+```bash
+cd backend
+source venv/bin/activate   # if using a venv
+pip install -r requirements-test.txt
+pytest
+```
+
+Configuration lives in [`backend/pytest.ini`](backend/pytest.ini) (verbosity, coverage report to `htmlcov/`, markers such as `unit` / `integration` / `requires_model`). Run a subset from `backend/`: `pytest tests/api/test_documents.py -v`.
+
+### Frontend (Vitest)
+
+From `frontend/`:
+
+```bash
+cd frontend
+npm install
+npm test              # watch mode
+npm run test:coverage # single run with coverage
+```
+
+Config: [`frontend/vitest.config.ts`](frontend/vitest.config.ts). Example tests live under `frontend/src/**/__tests__/`.
+
 ## Configuration highlights
 
 | Area | Notes |
@@ -126,17 +155,22 @@ DocumentsAnalysis/
 ├── backend/
 │   ├── main.py               # FastAPI app
 │   ├── config.py             # Settings (env)
+│   ├── pytest.ini            # Pytest / coverage defaults
 │   ├── api/                  # documents, query, system routes
 │   ├── core/                 # document models, processor, RAG
 │   ├── storage/              # document store, vector store
-│   └── requirements.txt
+│   ├── tests/                # Pytest suites (api, core, storage, …)
+│   ├── requirements.txt
+│   └── requirements-test.txt # Pytest + extras (install for `pytest`)
 └── frontend/
     ├── src/
     │   ├── pages/            # Dashboard, DocumentManager, ChatInterface
     │   ├── components/
     │   ├── services/api.ts
+    │   ├── services/__tests__/  # Vitest examples
     │   └── types/
     ├── vite.config.ts
+    ├── vitest.config.ts
     └── package.json
 ```
 
@@ -146,6 +180,7 @@ DocumentsAnalysis/
 |-------|----------------|
 | Backend | FastAPI, Pydantic Settings, ChromaDB, sentence-transformers, Anthropic SDK, pypdf / python-docx, etc. |
 | Frontend | React 18, TypeScript, Vite, Chakra UI, TanStack Query, Axios, React Router |
+| Testing | **Backend:** pytest, pytest-cov, httpx, respx (see `requirements-test.txt`). **Frontend:** Vitest, Testing Library, jsdom. |
 
 ## Documentation
 
@@ -155,4 +190,4 @@ DocumentsAnalysis/
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep changes focused and consistent with existing patterns in `backend/` and `frontend/`.
+Issues and pull requests are welcome. Please keep changes focused and consistent with existing patterns in `backend/` and `frontend/`. When you change behavior or APIs, extend or add tests and run **`pytest`** (backend) and **`npm test`** (frontend) before submitting.
