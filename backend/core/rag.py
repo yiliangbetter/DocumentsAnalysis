@@ -59,30 +59,27 @@ class RAGPipeline:
                 document_ids=document_ids,
             )
 
+            # Step 3: Generate answer (with or without context)
             if not retrieved:
-                return {
-                    "answer": "I don't have enough information to answer this question.",
-                    "sources": [],
-                    "confidence": 0.0,
-                }
-
-            # Step 3: Build context from retrieved chunks
-            context = self._build_context(retrieved)
-
-            # Step 4: Generate answer using Claude
-            answer = self._generate_answer(question, context)
+                # No relevant chunks found - ask LLM directly without context
+                answer = self._generate_answer_direct(question)
+                sources = []
+                confidence = 0.0
+            else:
+                # Build context from retrieved chunks and generate answer
+                context = self._build_context(retrieved)
+                answer = self._generate_answer_with_context(question, context)
+                sources = self._format_sources(retrieved)
+                confidence = sum(score for _, score, _ in retrieved) / len(retrieved)
 
             # Step 5: Format sources
             sources = self._format_sources(retrieved)
 
-            # Calculate confidence (average of similarity scores)
-            confidence = sum(score for _, score, _ in retrieved) / len(retrieved)
-
             return {
                 "answer": answer,
                 "sources": sources,
-                "confidence": round(confidence, 4),
-                "context_used": len(retrieved),
+                "confidence": round(confidence, 4) if isinstance(confidence, float) else confidence,
+                "context_used": len(retrieved) if retrieved else 0,
             }
 
         except Exception as e:
@@ -102,8 +99,8 @@ class RAGPipeline:
 
         return "\n---\n".join(context_parts)
 
-    def _generate_answer(self, question: str, context: str) -> str:
-        """Generate answer using Kimi K2.5."""
+    def _generate_answer_with_context(self, question: str, context: str) -> str:
+        """Generate answer using Kimi K2.5 with retrieved context."""
         messages = [
             {
                 "role": "system",
@@ -112,6 +109,28 @@ class RAGPipeline:
             {
                 "role": "user",
                 "content": f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+            }
+        ]
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+        )
+
+        return response.choices[0].message.content
+
+    def _generate_answer_direct(self, question: str) -> str:
+        """Generate answer using Kimi K2.5 without retrieved context."""
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful assistant. Answer the question to the best of your knowledge. Be concise and accurate."
+            },
+            {
+                "role": "user",
+                "content": question
             }
         ]
 
