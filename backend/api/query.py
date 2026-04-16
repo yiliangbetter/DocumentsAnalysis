@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from config import settings
 from core.rag import RAGPipeline
@@ -64,8 +64,17 @@ class SearchResponse(BaseModel):
 
 class ChatMessage(BaseModel):
     """Chat message model."""
-    role: str = Field(..., regex="^(user|assistant|system)$")
+    role: str
     content: str
+
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        """Validate role is one of the allowed values."""
+        allowed = {'user', 'assistant', 'system'}
+        if v not in allowed:
+            raise ValueError(f'role must be one of {allowed}')
+        return v
 
 
 class ChatRequest(BaseModel):

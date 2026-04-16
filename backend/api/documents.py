@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
+import aiofiles
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 
 from config import settings
@@ -90,10 +91,10 @@ async def upload_document(
     # Save to document store
     document_store.save(document)
 
-    # Save original file
+    # Save original file asynchronously
     file_storage_path = settings.FILE_STORAGE_PATH / f"{document.id}{Path(file.filename).suffix}"
-    with open(file_storage_path, "wb") as f:
-        f.write(file_content)
+    async with aiofiles.open(file_storage_path, "wb") as f:
+        await f.write(file_content)
 
     # Process document in background
     try:

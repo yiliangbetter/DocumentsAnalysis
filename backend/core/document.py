@@ -1,10 +1,15 @@
 """Document models and data classes."""
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+
+def utc_now() -> datetime:
+    """Return timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 
 class DocumentType(str, Enum):
@@ -46,8 +51,8 @@ class Document(BaseModel):
     source_path: str
     doc_type: DocumentType = DocumentType.UNKNOWN
     status: ProcessingStatus = ProcessingStatus.PENDING
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
     metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
     chunk_count: int = 0
     error_message: Optional[str] = None
@@ -56,8 +61,7 @@ class Document(BaseModel):
     def serialize_datetime(self, value: datetime) -> str:
         return value.isoformat()
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class DocumentChunk(BaseModel):
@@ -70,14 +74,13 @@ class DocumentChunk(BaseModel):
     end_char: int
     embedding: Optional[List[float]] = None  # Set after embedding generation
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
 
     @field_serializer('created_at')
     def serialize_datetime(self, value: datetime) -> str:
         return value.isoformat()
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class DocumentListResponse(BaseModel):

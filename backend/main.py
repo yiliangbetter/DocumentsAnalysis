@@ -1,4 +1,5 @@
 """FastAPI application entry point."""
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -10,6 +11,14 @@ from fastapi.staticfiles import StaticFiles
 from config import settings
 from storage.document_store import DocumentStore
 from storage.vector_store import VectorStore
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 # Global store instances
@@ -57,9 +66,25 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle global exceptions."""
+    # Log full exception details for debugging
+    logger.exception(
+        "Unhandled exception during request %s %s: %s",
+        request.method,
+        request.url,
+        exc
+    )
+
+    # Only expose details in debug mode
+    if settings.DEBUG:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(exc), "type": type(exc).__name__},
+        )
+
+    # Production: generic error message
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc), "type": type(exc).__name__},
+        content={"detail": "Internal server error"},
     )
 
 

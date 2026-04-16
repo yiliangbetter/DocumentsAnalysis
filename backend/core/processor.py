@@ -2,7 +2,7 @@
 import re
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO, List, Optional, Tuple
+from typing import BinaryIO, List, NamedTuple, Optional, Tuple
 
 from config import settings
 from core.document import (
@@ -12,6 +12,12 @@ from core.document import (
     DocumentType,
     ProcessingStatus,
 )
+
+
+class ProcessingResult(NamedTuple):
+    """Result of processing a document."""
+    document: Document
+    chunks: List[DocumentChunk]
 
 
 class DocumentProcessor:
@@ -26,8 +32,8 @@ class DocumentProcessor:
         file_content: bytes,
         filename: str,
         doc_type: DocumentType,
-    ) -> Document:
-        """Process a document file and return a Document object."""
+    ) -> ProcessingResult:
+        """Process a document file and return a ProcessingResult.""
         # Create document object
         document = Document(
             title=Path(filename).stem,
@@ -52,12 +58,12 @@ class DocumentProcessor:
             # Mark as completed
             document.status = ProcessingStatus.COMPLETED
 
-            return document, chunks
+            return ProcessingResult(document, chunks)
 
         except Exception as e:
             document.status = ProcessingStatus.FAILED
             document.error_message = str(e)
-            return document, []
+            return ProcessingResult(document, [])
 
     def _extract_content(
         self,
