@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import List, Optional
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,8 +21,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "info"
 
-    # CORS Configuration
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS Configuration - comma-separated string, parsed below
+    CORS_ORIGINS_STR: str = "http://localhost:5173,http://localhost:3000"
 
     # LLM Configuration (Kimi K2.5)
     KIMI_API_KEY: Optional[str] = None
@@ -61,6 +62,11 @@ class Settings(BaseSettings):
         self.VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)
         self.DOCUMENT_STORE_PATH.mkdir(parents=True, exist_ok=True)
         self.FILE_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Parse CORS_ORIGINS from comma-separated string."""
+        return [origin.strip() for origin in self.CORS_ORIGINS_STR.split(',') if origin.strip()]
 
 
 # Global settings instance

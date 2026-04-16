@@ -2,7 +2,6 @@
 from typing import Dict, List, Optional, Tuple
 
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 
 from config import settings
 from core.document import DocumentChunk
@@ -19,15 +18,10 @@ class VectorStore:
 
     def _initialize(self):
         """Initialize ChromaDB client and collection."""
-        # Configure ChromaDB settings
-        chroma_settings = ChromaSettings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory=str(settings.VECTOR_DB_PATH),
-            anonymized_telemetry=False,
+        # Initialize client with persistent storage (new ChromaDB API)
+        self.client = chromadb.PersistentClient(
+            path=str(settings.VECTOR_DB_PATH),
         )
-
-        # Initialize client
-        self.client = chromadb.Client(settings=chroma_settings)
 
         # Get or create collection
         self.collection = self.client.get_or_create_collection(

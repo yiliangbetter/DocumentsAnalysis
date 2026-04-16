@@ -33,7 +33,7 @@ class DocumentProcessor:
         filename: str,
         doc_type: DocumentType,
     ) -> ProcessingResult:
-        """Process a document file and return a ProcessingResult.""
+        """Process a document file and return a ProcessingResult."""
         # Create document object
         document = Document(
             title=Path(filename).stem,
