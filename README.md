@@ -121,7 +121,7 @@ Config: [`frontend/vitest.config.ts`](frontend/vitest.config.ts). Example tests 
 
 | Area | Notes |
 |------|--------|
-| **LLM** | `ANTHROPIC_API_KEY` required for query/chat. `LLM_MODEL` defaults in `config.py`. |
+| **LLM** | `KIMI_API_KEY` required for query/chat. `LLM_MODEL` defaults in `config.py`. |
 | **Embeddings** | Default `sentence-transformers/all-MiniLM-L6-v2` (downloads on first use). |
 | **PDF** | `PDF_PARSER=pypdf` (default) or `opendataloader` if you install the extra dependency (see `DESIGN.md`). |
 | **CORS** | `CORS_ORIGINS` must include your frontend origin (e.g. `http://localhost:5173`). |
