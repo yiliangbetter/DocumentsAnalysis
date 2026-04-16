@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Heading, IconButton, Input, Spinner, Text, VStack, HStack, Avatar, Divider } from '@chakra-ui/react'
+import { Box, Flex, Heading, IconButton, Input, Spinner, Text, VStack, HStack, Avatar } from '@chakra-ui/react'
 import { useState, useRef, useEffect } from 'react'
 import { FiSend, FiTrash2, FiUser } from 'react-icons/fi'
 import ReactMarkdown from 'react-markdown'
