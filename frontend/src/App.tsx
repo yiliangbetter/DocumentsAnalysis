@@ -8,9 +8,9 @@ import ChatInterface from './pages/ChatInterface'
 function App() {
   return (
     <BrowserRouter>
-      <Flex h="100vh">
+      <Flex h="100vh" w="100%" overflow="hidden" bg="gray.50">
         <Navbar />
-        <Box flex={1} p={6} overflow="auto">
+        <Box flex={1} p={6} overflow="auto" minW={0}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/documents" element={<DocumentManager />} />

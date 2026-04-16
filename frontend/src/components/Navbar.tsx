@@ -30,14 +30,12 @@ const Navbar = () => {
   return (
     <Flex
       w="240px"
-      h="100vh"
+      minH="100vh"
       bg="gray.800"
       color="white"
       direction="column"
       p={4}
-      position="fixed"
-      left={0}
-      top={0}
+      flexShrink={0}
     >
       <Text fontSize="xl" fontWeight="bold" mb={8} color="blue.400">
         Document Q&A
