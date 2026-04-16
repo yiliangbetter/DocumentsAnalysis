@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Heading, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Text, VStack } from '@chakra-ui/react'
+import { Box, Flex, Heading, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Text } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import { FiFileText, FiLayers, FiMessageCircle } from 'react-icons/fi'
 import { Link } from 'react-router-dom'

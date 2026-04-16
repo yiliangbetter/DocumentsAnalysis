@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import axios from 'axios'
 import api, {
   fetchDocuments,
   fetchStats,
@@ -10,7 +9,6 @@ import api, {
 
 // Mock axios
 vi.mock('axios')
-const mockedAxios = axios as vi.Mocked<typeof axios>
 
 const mockedApi = {
   get: vi.fn(),

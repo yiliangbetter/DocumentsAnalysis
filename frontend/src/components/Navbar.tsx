@@ -1,4 +1,4 @@
-import { Box, Flex, Link, Text, VStack, Icon } from '@chakra-ui/react'
+import { Flex, Link, Text, VStack } from '@chakra-ui/react'
 import { FiFileText, FiHome, FiMessageSquare } from 'react-icons/fi'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 
