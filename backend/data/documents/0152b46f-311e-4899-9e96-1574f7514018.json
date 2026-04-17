@@ -1,0 +1,23 @@
+{
+  "id": "0152b46f-311e-4899-9e96-1574f7514018",
+  "title": "E2E Sample",
+  "source_path": "e2e_doc.txt",
+  "doc_type": "txt",
+  "status": "processing",
+  "created_at": "2026-04-17T06:11:23.362244+00:00",
+  "updated_at": "2026-04-17T06:11:23.362284",
+  "metadata": {
+    "author": null,
+    "title": null,
+    "subject": null,
+    "creator": null,
+    "creation_date": null,
+    "modification_date": null,
+    "page_count": null,
+    "word_count": null,
+    "file_size": null,
+    "custom": {}
+  },
+  "chunk_count": 0,
+  "error_message": null
+}

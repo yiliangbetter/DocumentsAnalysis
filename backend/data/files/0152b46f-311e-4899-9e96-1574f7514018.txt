@@ -1,0 +1,1 @@
+Cursor is an AI code editor built for pair programming. It can run agents and apply patches.
