@@ -6,12 +6,16 @@ from pydantic import BaseModel, Field, field_validator
 
 from config import settings
 from core.rag import RAGPipeline
-from main import vector_store
+import main
 
 router = APIRouter()
 
-# Initialize RAG pipeline
-rag_pipeline = RAGPipeline(vector_store=vector_store)
+
+def get_rag_pipeline() -> RAGPipeline:
+    """Build a pipeline using the current vector store instance."""
+    if main.vector_store is None:
+        raise HTTPException(status_code=503, detail="Vector store not initialized")
+    return RAGPipeline(vector_store=main.vector_store)
 
 
 class QueryRequest(BaseModel):
@@ -107,6 +111,7 @@ async def query(request: QueryRequest):
     an answer using the Claude LLM.
     """
     try:
+        rag_pipeline = get_rag_pipeline()
         result = rag_pipeline.query(
             question=request.question,
             document_ids=request.document_ids,
@@ -138,6 +143,8 @@ async def search(request: SearchRequest):
     semantic similarity to the query.
     """
     try:
+        if main.vector_store is None:
+            raise HTTPException(status_code=503, detail="Vector store not initialized")
         from storage.vector_store import EmbeddingGenerator
 
         # Generate query embedding
@@ -145,7 +152,7 @@ async def search(request: SearchRequest):
         query_embedding = embedder.embed_text(request.query)
 
         # Search vector store
-        results = vector_store.search(
+        results = main.vector_store.search(
             query_embedding=query_embedding,
             top_k=request.top_k,
             document_ids=request.document_ids,
@@ -179,6 +186,7 @@ async def chat(request: ChatRequest):
     generates responses using the Claude LLM with RAG.
     """
     try:
+        rag_pipeline = get_rag_pipeline()
         # For now, treat chat similarly to query but with history context
         # Build context from history if provided
         history_context = ""

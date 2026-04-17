@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 512
     CHUNK_OVERLAP: int = 50
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_BACKEND: str = "sentence_transformers"  # options: sentence_transformers, hash
     EMBEDDING_DIMENSION: int = 384
 
     # PDF Parser Configuration

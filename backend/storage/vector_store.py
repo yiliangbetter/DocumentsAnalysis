@@ -1,4 +1,5 @@
 """Vector store implementation using ChromaDB."""
+import hashlib
 from typing import Dict, List, Optional, Tuple
 
 import chromadb
@@ -155,10 +156,33 @@ class EmbeddingGenerator:
             self._model = SentenceTransformer(self.model_name)
         return self._model
 
+    def _hash_embedding(self, text: str) -> List[float]:
+        """Generate a deterministic lightweight embedding for local/dev usage."""
+        dimension = settings.EMBEDDING_DIMENSION
+        vector = [0.0] * dimension
+        words = text.lower().split()
+        if not words:
+            return vector
+
+        # Hash each token into the vector space and normalize.
+        for word in words:
+            digest = hashlib.sha256(word.encode("utf-8")).digest()
+            bucket = int.from_bytes(digest[:4], "big") % dimension
+            sign = 1.0 if digest[4] % 2 == 0 else -1.0
+            vector[bucket] += sign
+
+        norm = sum(v * v for v in vector) ** 0.5
+        if norm > 0:
+            vector = [v / norm for v in vector]
+        return vector
+
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for a list of texts."""
         if not texts:
             return []
+
+        if settings.EMBEDDING_BACKEND == "hash":
+            return [self._hash_embedding(text) for text in texts]
 
         model = self._load_model()
         embeddings = model.encode(texts, convert_to_list=True)

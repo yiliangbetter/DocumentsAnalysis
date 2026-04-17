@@ -19,7 +19,7 @@ from core.processor import DocumentProcessor, get_document_type
 from storage.document_store import DocumentStore
 from storage.vector_store import EmbeddingGenerator, VectorStore
 
-from main import document_store, vector_store
+import main
 
 router = APIRouter()
 processor = DocumentProcessor()
@@ -33,7 +33,9 @@ async def list_documents(
     doc_type: Optional[DocumentType] = None,
 ):
     """List all documents with optional filtering."""
-    docs = document_store.get_all(skip=skip, limit=limit)
+    if main.document_store is None:
+        raise HTTPException(status_code=503, detail="Document store not initialized")
+    docs = main.document_store.get_all(skip=skip, limit=limit)
 
     # Apply filters
     if status:
@@ -43,7 +45,7 @@ async def list_documents(
 
     return {
         "documents": [doc.model_dump() for doc in docs],
-        "total": document_store.count(),
+        "total": main.document_store.count(),
         "skip": skip,
         "limit": limit,
     }
@@ -89,7 +91,9 @@ async def upload_document(
     )
 
     # Save to document store
-    document_store.save(document)
+    if main.document_store is None or main.vector_store is None:
+        raise HTTPException(status_code=503, detail="Stores not initialized")
+    main.document_store.save(document)
 
     # Save original file asynchronously
     file_storage_path = settings.FILE_STORAGE_PATH / f"{document.id}{Path(file.filename).suffix}"
@@ -109,7 +113,7 @@ async def upload_document(
         document.metadata = processed_doc.metadata
         document.chunk_count = len(chunks)
         document.status = ProcessingStatus.COMPLETED
-        document_store.save(document)
+        main.document_store.save(document)
 
         # Generate embeddings and add to vector store
         if chunks:
@@ -121,12 +125,12 @@ async def upload_document(
             # Filter out chunks without embeddings
             chunks_with_embeddings = [c for c in chunks if c.embedding is not None]
             if chunks_with_embeddings:
-                vector_store.add_chunks(chunks_with_embeddings)
+                main.vector_store.add_chunks(chunks_with_embeddings)
 
     except Exception as e:
         document.status = ProcessingStatus.FAILED
         document.error_message = str(e)
-        document_store.save(document)
+        main.document_store.save(document)
         raise HTTPException(
             status_code=500,
             detail=f"Error processing document: {str(e)}",
@@ -143,7 +147,9 @@ async def upload_document(
 @router.get("/{doc_id}")
 async def get_document(doc_id: str):
     """Get a document by ID."""
-    doc = document_store.get(doc_id)
+    if main.document_store is None:
+        raise HTTPException(status_code=503, detail="Document store not initialized")
+    doc = main.document_store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc.model_dump()
@@ -152,12 +158,14 @@ async def get_document(doc_id: str):
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(doc_id: str):
     """Delete a document and its associated data."""
-    doc = document_store.get(doc_id)
+    if main.document_store is None or main.vector_store is None:
+        raise HTTPException(status_code=503, detail="Stores not initialized")
+    doc = main.document_store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Delete from vector store
-    vector_store.delete_by_document_id(doc_id)
+    main.vector_store.delete_by_document_id(doc_id)
 
     # Delete original file
     file_storage_path = settings.FILE_STORAGE_PATH / f"{doc_id}{Path(doc.source_path).suffix}"
@@ -165,7 +173,7 @@ async def delete_document(doc_id: str):
         file_storage_path.unlink()
 
     # Delete from document store
-    document_store.delete(doc_id)
+    main.document_store.delete(doc_id)
 
     return None
 
@@ -175,7 +183,9 @@ async def download_document(doc_id: str):
     """Download the original document file."""
     from fastapi.responses import FileResponse
 
-    doc = document_store.get(doc_id)
+    if main.document_store is None:
+        raise HTTPException(status_code=503, detail="Document store not initialized")
+    doc = main.document_store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
