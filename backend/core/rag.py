@@ -71,7 +71,6 @@ class RAGPipeline:
                 # Build context from retrieved chunks and generate answer
                 context = self._build_context(retrieved)
                 answer = self._generate_answer_with_context(question, context)
-                sources = self._format_sources(retrieved)
                 confidence = sum(score for _, score, _ in retrieved) / len(retrieved)
 
             # Step 5: Format sources
