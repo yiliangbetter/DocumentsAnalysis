@@ -81,4 +81,4 @@ class TestRAGPipelineKimiLiveIntegration:
         answer = pipeline._generate_answer_direct("Reply with exactly: OK")
 
         assert isinstance(answer, str)
-        assert answer.strip() != ""
+        assert answer.strip() == "OK"

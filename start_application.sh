@@ -13,10 +13,16 @@ if [ ! -d "venv_test" ]; then
     exit 1
 fi
 
-# Set environment variables for Kimi API
-# Replace with your actual API key
+# Load backend env file if available so runtime matches test config.
+if [ -f "backend/.env" ]; then
+    set -a
+    source "backend/.env"
+    set +a
+fi
+
+# Fall back only if values are still missing.
 export KIMI_API_KEY="${KIMI_API_KEY:-your_api_key_here}"
-export KIMI_BASE_URL="https://api.moonshot.cn/v1"
+export KIMI_BASE_URL="${KIMI_BASE_URL:-https://api.moonshot.cn/v1}"
 
 echo "🔧 Environment configured:"
 echo "  - KIMI_API_KEY: ${KIMI_API_KEY:0:10}..."
