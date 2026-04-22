@@ -43,3 +43,8 @@
   - `build_retriever(...)` factory.
 - Wired `RAGPipeline` to call `self.retriever.retrieve(...)` instead of hardcoding `vector_store.search(...)`.
 - Added tests for mode selection (`vector`, `hybrid`) in `backend/tests/core/test_rag.py`.
+- Step 2 implementation added:
+  - Chunk-level metadata enrichment in `DocumentProcessor` (`entities`, `entity_confidence`).
+  - New `GraphStore` sidecar (`backend/storage/graph_store.py`) for document/chunk/entity nodes and relation edges.
+  - Upload/delete flow now syncs graph sidecar in `backend/api/documents.py`.
+  - Backend startup/health now initializes and reports graph store stats.

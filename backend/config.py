@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     BASE_DIR: Path = Path(__file__).parent
     DATA_DIR: Path = Path("./data")
     VECTOR_DB_PATH: Path = Path("./data/vector_db")
+    GRAPH_STORE_PATH: Path = Path("./data/graph")
     DOCUMENT_STORE_PATH: Path = Path("./data/documents")
     FILE_STORAGE_PATH: Path = Path("./data/files")
 
@@ -61,6 +62,7 @@ class Settings(BaseSettings):
         # Ensure data directories exist
         self.DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)
+        self.GRAPH_STORE_PATH.mkdir(parents=True, exist_ok=True)
         self.DOCUMENT_STORE_PATH.mkdir(parents=True, exist_ok=True)
         self.FILE_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
 

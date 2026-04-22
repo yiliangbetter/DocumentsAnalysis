@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config import settings
 from storage.document_store import DocumentStore
+from storage.graph_store import GraphStore
 from storage.vector_store import VectorStore
 
 
@@ -24,19 +25,22 @@ logger = logging.getLogger(__name__)
 # Global store instances
 document_store: DocumentStore = None
 vector_store: VectorStore = None
+graph_store: GraphStore = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler - startup and shutdown."""
-    global document_store, vector_store
+    global document_store, vector_store, graph_store
 
     # Startup
     print("Starting up Document Q&A API...")
     document_store = DocumentStore()
     vector_store = VectorStore()
+    graph_store = GraphStore()
     print(f"Loaded {document_store.count()} documents")
     print(f"Vector store contains {vector_store.get_chunk_count()} chunks")
+    print(f"Graph store contains {graph_store.get_stats()['documents_indexed']} indexed documents")
 
     yield
 
@@ -96,6 +100,7 @@ async def health_check():
         "status": "healthy",
         "documents": document_store.count() if document_store else 0,
         "chunks": vector_store.get_chunk_count() if vector_store else 0,
+        "graph_documents": graph_store.get_stats()["documents_indexed"] if graph_store else 0,
     }
 
 

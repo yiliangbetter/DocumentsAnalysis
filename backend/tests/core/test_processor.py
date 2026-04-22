@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.document import DocumentType, ProcessingStatus
+from core.document import DocumentMetadata, DocumentType, ProcessingStatus
 from core.processor import DocumentProcessor, get_document_type
 
 
@@ -173,6 +173,17 @@ class TestDocumentProcessorChunking:
 
         for i, chunk in enumerate(chunks):
             assert chunk.chunk_index == i
+
+    def test_chunk_metadata_contains_entities(self, processor):
+        """Test chunk metadata includes extracted entity candidates."""
+        text = "Alice met Bob in Paris. Charlie reviewed the report."
+        chunks = processor._create_chunks(text, "test-doc-id")
+
+        assert len(chunks) == 1
+        metadata = chunks[0].metadata
+        assert "entities" in metadata
+        assert "entity_confidence" in metadata
+        assert "Alice" in metadata["entities"]
 
 
 class TestDocumentProcessorExtractText:

@@ -18,6 +18,7 @@ Evaluate the current vector-database RAG approach against a graph-based RAG appr
 | 5 | Share practical next steps and validation checklist | complete |
 | 6 | Implement retrieval abstraction and mode flag | complete |
 | 7 | Validate behavior with tests/lints and document status | complete |
+| 8 | Add graph sidecar schema enrichment during ingestion | complete |
 
 ## Decisions
 - Prefer **hybrid evolution** (vector-first + graph augmentation) over replacing vector retrieval immediately.

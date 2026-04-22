@@ -26,6 +26,7 @@ class DocumentProcessor:
     def __init__(self):
         self.chunk_size = settings.CHUNK_SIZE
         self.chunk_overlap = settings.CHUNK_OVERLAP
+        self.entity_pattern = re.compile(r"\b[A-Z][a-zA-Z0-9]{2,}\b")
 
     def process_document(
         self,
@@ -192,12 +193,17 @@ class DocumentProcessor:
 
             chunk_text = text[start:end].strip()
             if chunk_text:
+                entities = self._extract_entities(chunk_text)
                 chunk = DocumentChunk(
                     document_id=document_id,
                     text=chunk_text,
                     chunk_index=chunk_index,
                     start_char=start,
                     end_char=end,
+                    metadata={
+                        "entities": entities,
+                        "entity_confidence": {entity: 0.6 for entity in entities},
+                    },
                 )
                 chunks.append(chunk)
                 chunk_index += 1
@@ -208,6 +214,23 @@ class DocumentProcessor:
                 start = end
 
         return chunks
+
+    def _extract_entities(self, text: str, max_entities: int = 20) -> List[str]:
+        """Extract lightweight entity candidates from chunk text.
+
+        This is intentionally heuristic and fast for phase-2 enrichment.
+        A stronger NER/linking stage can replace this later.
+        """
+        seen = set()
+        ordered_entities: List[str] = []
+        for match in self.entity_pattern.findall(text):
+            entity = match.strip()
+            if entity and entity not in seen:
+                seen.add(entity)
+                ordered_entities.append(entity)
+            if len(ordered_entities) >= max_entities:
+                break
+        return ordered_entities
 
 
 def get_document_type(filename: str) -> DocumentType:

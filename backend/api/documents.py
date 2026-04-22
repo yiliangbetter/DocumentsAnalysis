@@ -126,6 +126,8 @@ async def upload_document(
             chunks_with_embeddings = [c for c in chunks if c.embedding is not None]
             if chunks_with_embeddings:
                 main.vector_store.add_chunks(chunks_with_embeddings)
+                if main.graph_store is not None:
+                    main.graph_store.upsert_document_chunks(document.id, chunks_with_embeddings)
 
     except Exception as e:
         document.status = ProcessingStatus.FAILED
@@ -166,6 +168,8 @@ async def delete_document(doc_id: str):
 
     # Delete from vector store
     main.vector_store.delete_by_document_id(doc_id)
+    if main.graph_store is not None:
+        main.graph_store.delete_by_document_id(doc_id)
 
     # Delete original file
     file_storage_path = settings.FILE_STORAGE_PATH / f"{doc_id}{Path(doc.source_path).suffix}"
