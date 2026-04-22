@@ -7,6 +7,7 @@ import openai
 from config import settings
 from core.document import DocumentChunk
 from core.retrievers import build_retriever
+from storage.graph_store import GraphStore
 from storage.vector_store import VectorStore
 
 
@@ -16,6 +17,7 @@ class RAGPipeline:
     def __init__(
         self,
         vector_store: VectorStore,
+        graph_store: Optional[GraphStore] = None,
         openai_client: Optional[openai.OpenAI] = None,
     ):
         self.vector_store = vector_store
@@ -27,7 +29,11 @@ class RAGPipeline:
         self.max_tokens = settings.MAX_TOKENS
         self.temperature = settings.TEMPERATURE
         self.top_k = settings.TOP_K_RETRIEVAL
-        self.retriever = build_retriever(settings.RETRIEVAL_MODE, vector_store)
+        self.retriever = build_retriever(
+            settings.RETRIEVAL_MODE,
+            vector_store,
+            graph_store=graph_store,
+        )
 
     def query(
         self,

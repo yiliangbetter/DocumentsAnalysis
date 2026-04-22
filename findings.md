@@ -48,3 +48,8 @@
   - New `GraphStore` sidecar (`backend/storage/graph_store.py`) for document/chunk/entity nodes and relation edges.
   - Upload/delete flow now syncs graph sidecar in `backend/api/documents.py`.
   - Backend startup/health now initializes and reports graph store stats.
+- Step 3 implementation added:
+  - `HybridRetriever` now performs vector recall + graph expansion + merged reranking.
+  - `GraphStore` can expand related chunk candidates via shared entity mentions.
+  - `VectorStore` can fetch chunk texts by chunk ID for graph-expanded candidates.
+  - Query pipeline now passes graph store into `RAGPipeline` for hybrid mode.

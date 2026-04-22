@@ -15,7 +15,10 @@ def get_rag_pipeline() -> RAGPipeline:
     """Build a pipeline using the current vector store instance."""
     if main.vector_store is None:
         raise HTTPException(status_code=503, detail="Vector store not initialized")
-    return RAGPipeline(vector_store=main.vector_store)
+    return RAGPipeline(
+        vector_store=main.vector_store,
+        graph_store=getattr(main, "graph_store", None),
+    )
 
 
 class QueryRequest(BaseModel):

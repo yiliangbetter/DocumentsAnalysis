@@ -99,5 +99,9 @@ class TestRAGPipelineRetrievalModes:
         from core import rag as rag_module
 
         monkeypatch.setattr(rag_module.settings, "RETRIEVAL_MODE", "hybrid")
-        pipeline = RAGPipeline(vector_store=MagicMock(), openai_client=MagicMock())
+        pipeline = RAGPipeline(
+            vector_store=MagicMock(),
+            graph_store=MagicMock(),
+            openai_client=MagicMock(),
+        )
         assert isinstance(pipeline.retriever, HybridRetriever)

@@ -1,7 +1,7 @@
 """Lightweight graph sidecar store for document/chunk/entity relations."""
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from config import settings
 from core.document import DocumentChunk
@@ -87,3 +87,57 @@ class GraphStore:
         """Get simple graph store stats."""
         files = list(self.storage_path.glob("*.json"))
         return {"documents_indexed": len(files)}
+
+    def expand_related_chunks(
+        self,
+        seed_chunk_ids: List[str],
+        limit: int = 10,
+    ) -> List[Tuple[str, float]]:
+        """Expand chunk candidates through shared entity mentions.
+
+        Returns tuples of (chunk_id, relation_score) sorted descending.
+        """
+        if not seed_chunk_ids or limit <= 0:
+            return []
+
+        seed_nodes = {f"chunk:{chunk_id}" for chunk_id in seed_chunk_ids}
+        entity_weights: Dict[str, float] = {}
+        candidate_scores: Dict[str, float] = {}
+
+        for graph_file in self.storage_path.glob("*.json"):
+            try:
+                with open(graph_file, "r", encoding="utf-8") as file:
+                    graph = json.load(file)
+            except (OSError, json.JSONDecodeError):
+                continue
+
+            edges = graph.get("edges", [])
+            # Stage 1: gather entities connected from seed chunks.
+            for edge in edges:
+                if edge.get("type") != "mentions":
+                    continue
+                source = edge.get("source")
+                target = edge.get("target")
+                if source in seed_nodes and target:
+                    entity_weights[target] = max(
+                        entity_weights.get(target, 0.0),
+                        float(edge.get("confidence", 0.5)),
+                    )
+
+            # Stage 2: score other chunks that mention those entities.
+            for edge in edges:
+                if edge.get("type") != "mentions":
+                    continue
+                source = edge.get("source")
+                target = edge.get("target")
+                if not source or not target or source in seed_nodes:
+                    continue
+                if not source.startswith("chunk:"):
+                    continue
+                if target not in entity_weights:
+                    continue
+                score = entity_weights[target] * float(edge.get("confidence", 0.5))
+                candidate_scores[source] = max(candidate_scores.get(source, 0.0), score)
+
+        ranked = sorted(candidate_scores.items(), key=lambda item: item[1], reverse=True)[:limit]
+        return [(chunk_node.split("chunk:", 1)[1], score) for chunk_node, score in ranked]

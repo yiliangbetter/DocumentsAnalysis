@@ -22,3 +22,7 @@
   - Added heuristic entity extraction into chunk metadata.
   - Added graph sidecar storage and hooked it into upload/delete flow.
   - Added tests for graph store and chunk metadata enrichment.
+- Implemented step 3:
+  - Added graph expansion method for related chunks in graph store.
+  - Upgraded hybrid retriever to merge vector and graph candidates with reranking.
+  - Added tests for hybrid retrieval and graph expansion behavior.

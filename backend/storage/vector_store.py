@@ -133,6 +133,31 @@ class VectorStore:
         """Get total number of chunks in the store."""
         return self.collection.count()
 
+    def get_chunks_by_ids(
+        self,
+        chunk_ids: List[str],
+        document_ids: Optional[List[str]] = None,
+    ) -> List[Tuple[str, str]]:
+        """Fetch chunk texts by IDs, optionally filtered by document IDs."""
+        if not chunk_ids:
+            return []
+
+        results = self.collection.get(
+            ids=chunk_ids,
+            include=["documents", "metadatas"],
+        )
+
+        fetched: List[Tuple[str, str]] = []
+        ids = results.get("ids") or []
+        docs = results.get("documents") or []
+        metas = results.get("metadatas") or []
+        for chunk_id, text, meta in zip(ids, docs, metas):
+            if document_ids and meta and meta.get("document_id") not in document_ids:
+                continue
+            fetched.append((chunk_id, text))
+
+        return fetched
+
     def get_stats(self) -> dict:
         """Get vector store statistics."""
         return {
