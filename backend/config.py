@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     # Search Configuration
     TOP_K_RETRIEVAL: int = 5
     SIMILARITY_THRESHOLD: float = 0.7
+    RETRIEVAL_MODE: str = "vector"  # options: vector, hybrid, graph
 
     # Upload Limits
     MAX_FILE_SIZE: int = 104_857_600  # 100MB

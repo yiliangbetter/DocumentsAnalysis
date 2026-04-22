@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.rag import RAGPipeline
+from core.retrievers import HybridRetriever, VectorRetriever
 
 
 class TestRAGPipelineKimiCommunication:
@@ -82,3 +83,21 @@ class TestRAGPipelineKimiLiveIntegration:
 
         assert isinstance(answer, str)
         assert answer.strip() == "OK"
+
+
+class TestRAGPipelineRetrievalModes:
+    """Verify retriever selection from settings."""
+
+    def test_uses_vector_retriever_by_default(self, monkeypatch):
+        from core import rag as rag_module
+
+        monkeypatch.setattr(rag_module.settings, "RETRIEVAL_MODE", "vector")
+        pipeline = RAGPipeline(vector_store=MagicMock(), openai_client=MagicMock())
+        assert isinstance(pipeline.retriever, VectorRetriever)
+
+    def test_uses_hybrid_retriever_when_configured(self, monkeypatch):
+        from core import rag as rag_module
+
+        monkeypatch.setattr(rag_module.settings, "RETRIEVAL_MODE", "hybrid")
+        pipeline = RAGPipeline(vector_store=MagicMock(), openai_client=MagicMock())
+        assert isinstance(pipeline.retriever, HybridRetriever)

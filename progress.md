@@ -1,0 +1,20 @@
+# Progress Log
+
+## Session 2026-04-22
+- Initialized planning files: `task_plan.md`, `findings.md`, `progress.md`.
+- Started Phase 1: inspect current RAG implementation and tests.
+- Read `backend/core/rag.py`, `backend/tests/core/test_rag.py`, and `backend/config.py`.
+- Captured first repository findings in `findings.md` about current flat vector retrieval behavior.
+- Read `backend/storage/vector_store.py` and `backend/core/document.py`.
+- Confirmed chunk relation data is not persisted as graph edges in current retrieval path.
+- Read `backend/api/query.py` and `backend/core/processor.py` to map migration constraints.
+- Added conceptual comparison and initial recommendation in `findings.md`.
+- Updated `task_plan.md`: phases 1-3 completed; phase 4 in progress.
+- Completed architecture recommendation and rollout checklist in `task_plan.md`.
+- Planning workflow complete for this `/plan` request.
+- Began implementation follow-up: retrieval strategy abstraction and retrieval mode config.
+- Added new file `backend/core/retrievers.py` and wired `RAGPipeline` to use it.
+- Added tests for retriever mode selection in `backend/tests/core/test_rag.py`.
+- Ran diagnostics:
+  - `ReadLints` on changed files: clean.
+  - `pytest tests/core/test_rag.py`: failed to run because `pytest` is not installed/available in PATH.

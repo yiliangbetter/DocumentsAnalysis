@@ -6,6 +6,7 @@ import openai
 
 from config import settings
 from core.document import DocumentChunk
+from core.retrievers import build_retriever
 from storage.vector_store import VectorStore
 
 
@@ -26,6 +27,7 @@ class RAGPipeline:
         self.max_tokens = settings.MAX_TOKENS
         self.temperature = settings.TEMPERATURE
         self.top_k = settings.TOP_K_RETRIEVAL
+        self.retriever = build_retriever(settings.RETRIEVAL_MODE, vector_store)
 
     def query(
         self,
@@ -53,7 +55,7 @@ class RAGPipeline:
 
             # Step 2: Retrieve relevant chunks
             k = top_k or self.top_k
-            retrieved = self.vector_store.search(
+            retrieved = self.retriever.retrieve(
                 query_embedding=query_embedding,
                 top_k=k,
                 document_ids=document_ids,
