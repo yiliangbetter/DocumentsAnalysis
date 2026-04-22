@@ -1,5 +1,5 @@
 """Query and chat API routes."""
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -28,6 +28,10 @@ class QueryRequest(BaseModel):
     document_ids: Optional[List[str]] = Field(
         default=None,
         description="Optional list of document IDs to search within"
+    )
+    retrieval_mode: Optional[Literal["vector", "hybrid", "graph"]] = Field(
+        default=None,
+        description="Optional retrieval mode override",
     )
 
 
@@ -96,6 +100,10 @@ class ChatRequest(BaseModel):
         description="Optional list of document IDs to search within"
     )
     top_k: int = Field(default=5, ge=1, le=20, description="Number of chunks to retrieve")
+    retrieval_mode: Optional[Literal["vector", "hybrid", "graph"]] = Field(
+        default=None,
+        description="Optional retrieval mode override",
+    )
 
 
 class ChatResponse(BaseModel):
@@ -119,6 +127,7 @@ async def query(request: QueryRequest):
             question=request.question,
             document_ids=request.document_ids,
             top_k=request.top_k,
+            retrieval_mode=request.retrieval_mode,
         )
 
         if "error" in result:
@@ -209,6 +218,7 @@ async def chat(request: ChatRequest):
             question=full_question,
             document_ids=request.document_ids,
             top_k=request.top_k,
+            retrieval_mode=request.retrieval_mode,
         )
 
         if "error" in result:

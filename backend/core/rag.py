@@ -18,9 +18,12 @@ class RAGPipeline:
         self,
         vector_store: VectorStore,
         graph_store: Optional[GraphStore] = None,
+        retrieval_mode: Optional[str] = None,
         openai_client: Optional[openai.OpenAI] = None,
     ):
         self.vector_store = vector_store
+        self.graph_store = graph_store
+        self.retrieval_mode = retrieval_mode or settings.RETRIEVAL_MODE
         self.client = openai_client or openai.OpenAI(
             api_key=settings.KIMI_API_KEY,
             base_url=settings.KIMI_BASE_URL
@@ -30,7 +33,7 @@ class RAGPipeline:
         self.temperature = settings.TEMPERATURE
         self.top_k = settings.TOP_K_RETRIEVAL
         self.retriever = build_retriever(
-            settings.RETRIEVAL_MODE,
+            self.retrieval_mode,
             vector_store,
             graph_store=graph_store,
         )
@@ -40,6 +43,7 @@ class RAGPipeline:
         question: str,
         document_ids: Optional[List[str]] = None,
         top_k: Optional[int] = None,
+        retrieval_mode: Optional[str] = None,
     ) -> dict:
         """
         Execute a RAG query: retrieve relevant chunks and generate answer.
@@ -61,7 +65,15 @@ class RAGPipeline:
 
             # Step 2: Retrieve relevant chunks
             k = top_k or self.top_k
-            retrieved = self.retriever.retrieve(
+            retriever = self.retriever
+            if retrieval_mode and retrieval_mode.strip().lower() != self.retrieval_mode.strip().lower():
+                retriever = build_retriever(
+                    retrieval_mode,
+                    self.vector_store,
+                    graph_store=self.graph_store,
+                )
+
+            retrieved = retriever.retrieve(
                 query_embedding=query_embedding,
                 top_k=k,
                 document_ids=document_ids,

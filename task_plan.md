@@ -20,6 +20,7 @@ Evaluate the current vector-database RAG approach against a graph-based RAG appr
 | 7 | Validate behavior with tests/lints and document status | complete |
 | 8 | Add graph sidecar schema enrichment during ingestion | complete |
 | 9 | Implement hybrid graph-expanded retrieval reranking | complete |
+| 10 | Add per-request retrieval-mode rollout controls | complete |
 
 ## Decisions
 - Prefer **hybrid evolution** (vector-first + graph augmentation) over replacing vector retrieval immediately.

@@ -91,6 +91,48 @@ class HybridRetriever(BaseRetriever):
         return sorted(merged.values(), key=lambda item: item[1], reverse=True)[:top_k]
 
 
+class GraphRetriever(BaseRetriever):
+    """Graph-prioritized retriever for rollout/testing."""
+
+    def __init__(self, vector_store: VectorStore, graph_store: Optional[GraphStore] = None):
+        self.vector_store = vector_store
+        self.graph_store = graph_store
+
+    def retrieve(
+        self,
+        query_embedding: List[float],
+        top_k: int,
+        document_ids: Optional[List[str]] = None,
+    ) -> List[RetrievedChunk]:
+        # Use a broad vector seed for query anchoring, then keep graph-expanded candidates.
+        seed_results = self.vector_store.search(
+            query_embedding=query_embedding,
+            top_k=max(top_k * 2, 8),
+            document_ids=document_ids,
+        )
+        if not seed_results or self.graph_store is None:
+            return seed_results[:top_k]
+
+        seed_chunk_ids = [chunk_id for chunk_id, _, _ in seed_results]
+        related = self.graph_store.expand_related_chunks(seed_chunk_ids, limit=top_k * 4)
+        if not related:
+            return seed_results[:top_k]
+
+        related_scores = {chunk_id: relation_score for chunk_id, relation_score in related}
+        fetched = self.vector_store.get_chunks_by_ids(
+            list(related_scores.keys()),
+            document_ids=document_ids,
+        )
+        if not fetched:
+            return seed_results[:top_k]
+
+        graph_results = [
+            (chunk_id, related_scores.get(chunk_id, 0.0), text)
+            for chunk_id, text in fetched
+        ]
+        return sorted(graph_results, key=lambda item: item[1], reverse=True)[:top_k]
+
+
 def build_retriever(
     mode: str,
     vector_store: VectorStore,
@@ -100,5 +142,6 @@ def build_retriever(
     normalized_mode = (mode or "vector").strip().lower()
     if normalized_mode == "hybrid":
         return HybridRetriever(vector_store, graph_store=graph_store)
-    # `graph` currently falls back to vector until graph-only retrieval is implemented.
+    if normalized_mode == "graph":
+        return GraphRetriever(vector_store, graph_store=graph_store)
     return VectorRetriever(vector_store)

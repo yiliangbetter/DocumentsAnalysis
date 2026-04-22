@@ -26,3 +26,7 @@
   - Added graph expansion method for related chunks in graph store.
   - Upgraded hybrid retriever to merge vector and graph candidates with reranking.
   - Added tests for hybrid retrieval and graph expansion behavior.
+- Implemented step 4:
+  - Added per-request retrieval mode override in query/chat request path.
+  - Added graph-prioritized retriever mode.
+  - Extended retrieval tests to cover graph mode selection/behavior.

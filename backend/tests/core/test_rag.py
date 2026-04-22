@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.rag import RAGPipeline
-from core.retrievers import HybridRetriever, VectorRetriever
+from core.retrievers import GraphRetriever, HybridRetriever, VectorRetriever
 
 
 class TestRAGPipelineKimiCommunication:
@@ -105,3 +105,14 @@ class TestRAGPipelineRetrievalModes:
             openai_client=MagicMock(),
         )
         assert isinstance(pipeline.retriever, HybridRetriever)
+
+    def test_uses_graph_retriever_when_configured(self, monkeypatch):
+        from core import rag as rag_module
+
+        monkeypatch.setattr(rag_module.settings, "RETRIEVAL_MODE", "graph")
+        pipeline = RAGPipeline(
+            vector_store=MagicMock(),
+            graph_store=MagicMock(),
+            openai_client=MagicMock(),
+        )
+        assert isinstance(pipeline.retriever, GraphRetriever)

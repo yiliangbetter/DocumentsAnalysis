@@ -53,3 +53,7 @@
   - `GraphStore` can expand related chunk candidates via shared entity mentions.
   - `VectorStore` can fetch chunk texts by chunk ID for graph-expanded candidates.
   - Query pipeline now passes graph store into `RAGPipeline` for hybrid mode.
+- Step 4 implementation added:
+  - `RAGPipeline.query(...)` now supports per-request `retrieval_mode` override.
+  - API request models now accept optional `retrieval_mode` (`vector|hybrid|graph`) for `/query` and `/chat`.
+  - Added `GraphRetriever` mode for graph-prioritized rollout/testing.
