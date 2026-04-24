@@ -1,25 +1,22 @@
 """Document API routes."""
-import shutil
 from pathlib import Path
 from typing import List, Optional
-from uuid import uuid4
 
 import aiofiles
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 
+from api.dependencies import get_document_store, get_graph_store, get_vector_store
 from config import settings
 from core.document import (
     Document,
-    DocumentMetadata,
     DocumentType,
     DocumentUploadResponse,
     ProcessingStatus,
 )
 from core.document_processor import DocumentProcessor, get_document_type
 from storage.document_store import DocumentStore
-from storage.vector_store import EmbeddingGenerator, VectorStore
-
-import main
+from storage.graph_store import GraphStore
+from storage.vector_store import VectorStore
 
 router = APIRouter()
 processor = DocumentProcessor()
@@ -31,11 +28,10 @@ async def list_documents(
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[ProcessingStatus] = None,
     doc_type: Optional[DocumentType] = None,
+    document_store: DocumentStore = Depends(get_document_store),
 ):
     """List all documents with optional filtering."""
-    if main.document_store is None:
-        raise HTTPException(status_code=503, detail="Document store not initialized")
-    docs = main.document_store.get_all(skip=skip, limit=limit)
+    docs = document_store.get_all(skip=skip, limit=limit)
 
     # Apply filters
     if status:
@@ -45,7 +41,7 @@ async def list_documents(
 
     return {
         "documents": [doc.model_dump() for doc in docs],
-        "total": main.document_store.count(),
+        "total": document_store.count(),
         "skip": skip,
         "limit": limit,
     }
@@ -55,6 +51,9 @@ async def list_documents(
 async def upload_document(
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
+    document_store: DocumentStore = Depends(get_document_store),
+    vector_store: VectorStore = Depends(get_vector_store),
+    graph_store: Optional[GraphStore] = Depends(get_graph_store),
 ):
     """Upload a new document for processing."""
     # Validate file
@@ -91,9 +90,7 @@ async def upload_document(
     )
 
     # Save to document store
-    if main.document_store is None or main.vector_store is None:
-        raise HTTPException(status_code=503, detail="Stores not initialized")
-    main.document_store.save(document)
+    document_store.save(document)
 
     # Save original file asynchronously
     file_storage_path = settings.FILE_STORAGE_PATH / f"{document.id}{Path(file.filename).suffix}"
@@ -113,7 +110,7 @@ async def upload_document(
         document.metadata = processed_doc.metadata
         document.chunk_count = len(chunks)
         document.status = ProcessingStatus.COMPLETED
-        main.document_store.save(document)
+        document_store.save(document)
 
         # Generate embeddings and add to vector store
         if chunks:
@@ -125,14 +122,14 @@ async def upload_document(
             # Filter out chunks without embeddings
             chunks_with_embeddings = [c for c in chunks if c.embedding is not None]
             if chunks_with_embeddings:
-                main.vector_store.add_chunks(chunks_with_embeddings)
-                if main.graph_store is not None:
-                    main.graph_store.upsert_document_chunks(document.id, chunks_with_embeddings)
+                vector_store.add_chunks(chunks_with_embeddings)
+                if graph_store is not None:
+                    graph_store.upsert_document_chunks(document.id, chunks_with_embeddings)
 
     except Exception as e:
         document.status = ProcessingStatus.FAILED
         document.error_message = str(e)
-        main.document_store.save(document)
+        document_store.save(document)
         raise HTTPException(
             status_code=500,
             detail=f"Error processing document: {str(e)}",
@@ -147,29 +144,33 @@ async def upload_document(
 
 
 @router.get("/{doc_id}")
-async def get_document(doc_id: str):
+async def get_document(
+    doc_id: str,
+    document_store: DocumentStore = Depends(get_document_store),
+):
     """Get a document by ID."""
-    if main.document_store is None:
-        raise HTTPException(status_code=503, detail="Document store not initialized")
-    doc = main.document_store.get(doc_id)
+    doc = document_store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc.model_dump()
 
 
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_document(doc_id: str):
+async def delete_document(
+    doc_id: str,
+    document_store: DocumentStore = Depends(get_document_store),
+    vector_store: VectorStore = Depends(get_vector_store),
+    graph_store: Optional[GraphStore] = Depends(get_graph_store),
+):
     """Delete a document and its associated data."""
-    if main.document_store is None or main.vector_store is None:
-        raise HTTPException(status_code=503, detail="Stores not initialized")
-    doc = main.document_store.get(doc_id)
+    doc = document_store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Delete from vector store
-    main.vector_store.delete_by_document_id(doc_id)
-    if main.graph_store is not None:
-        main.graph_store.delete_by_document_id(doc_id)
+    vector_store.delete_by_document_id(doc_id)
+    if graph_store is not None:
+        graph_store.delete_by_document_id(doc_id)
 
     # Delete original file
     file_storage_path = settings.FILE_STORAGE_PATH / f"{doc_id}{Path(doc.source_path).suffix}"
@@ -177,19 +178,20 @@ async def delete_document(doc_id: str):
         file_storage_path.unlink()
 
     # Delete from document store
-    main.document_store.delete(doc_id)
+    document_store.delete(doc_id)
 
     return None
 
 
 @router.get("/{doc_id}/download")
-async def download_document(doc_id: str):
+async def download_document(
+    doc_id: str,
+    document_store: DocumentStore = Depends(get_document_store),
+):
     """Download the original document file."""
     from fastapi.responses import FileResponse
 
-    if main.document_store is None:
-        raise HTTPException(status_code=503, detail="Document store not initialized")
-    doc = main.document_store.get(doc_id)
+    doc = document_store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 

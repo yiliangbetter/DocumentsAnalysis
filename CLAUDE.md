@@ -108,8 +108,16 @@ Remember: **Small, frequent commits are better than large, infrequent ones.**
 ### Backend Tests
 
 ```bash
-cd backend
-pytest --cov=. --cov-report=html
+# Always load backend/.env before pytest so integration tests
+# can see KIMI_API_KEY / KIMI_BASE_URL when present.
+set -a && source backend/.env && set +a
+PYTHONPATH=backend ./.venv-tests/bin/python -m pytest backend/tests -q
+```
+
+```bash
+# Single test example (same env loading rule)
+set -a && source backend/.env && set +a
+PYTHONPATH=backend ./.venv-tests/bin/python -m pytest backend/tests/core/test_rag.py::TestRAGPipelineKimiLiveIntegration::test_generate_answer_direct_live_kimi_api -q
 ```
 
 ### Frontend Tests

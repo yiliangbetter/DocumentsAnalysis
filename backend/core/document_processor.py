@@ -147,7 +147,11 @@ class DocumentProcessor:
         except Exception as e:
             raise ValueError(f"Failed to extract DOCX content: {str(e)}")
 
-    def _extract_text(self, file_content: bytes) -> Tuple[str, DocumentMetadata]:
+    def _extract_text(
+        self,
+        file_content: bytes,
+        doc_type: Optional[DocumentType] = None,
+    ) -> Tuple[str, DocumentMetadata]:
         """Extract text from plain text files."""
         metadata = DocumentMetadata()
 

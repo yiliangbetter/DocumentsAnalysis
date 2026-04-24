@@ -1,23 +1,26 @@
 """Query and chat API routes."""
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
+from api.dependencies import get_graph_store, get_vector_store
 from config import settings
 from core.rag import RAGPipeline
-import main
+from storage.graph_store import GraphStore
+from storage.vector_store import VectorStore
 
 router = APIRouter()
 
 
-def get_rag_pipeline() -> RAGPipeline:
+def get_rag_pipeline(
+    vector_store: VectorStore = Depends(get_vector_store),
+    graph_store: Optional[GraphStore] = Depends(get_graph_store),
+) -> RAGPipeline:
     """Build a pipeline using the current vector store instance."""
-    if main.vector_store is None:
-        raise HTTPException(status_code=503, detail="Vector store not initialized")
     return RAGPipeline(
-        vector_store=main.vector_store,
-        graph_store=getattr(main, "graph_store", None),
+        vector_store=vector_store,
+        graph_store=graph_store,
     )
 
 
@@ -114,7 +117,10 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query(request: QueryRequest):
+async def query(
+    request: QueryRequest,
+    rag_pipeline: RAGPipeline = Depends(get_rag_pipeline),
+):
     """
     Execute a RAG query to answer a question.
 
@@ -122,7 +128,6 @@ async def query(request: QueryRequest):
     an answer using the Claude LLM.
     """
     try:
-        rag_pipeline = get_rag_pipeline()
         result = rag_pipeline.query(
             question=request.question,
             document_ids=request.document_ids,
@@ -147,7 +152,10 @@ async def query(request: QueryRequest):
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(request: SearchRequest):
+async def search(
+    request: SearchRequest,
+    vector_store: VectorStore = Depends(get_vector_store),
+):
     """
     Perform semantic search without LLM generation.
 
@@ -155,8 +163,6 @@ async def search(request: SearchRequest):
     semantic similarity to the query.
     """
     try:
-        if main.vector_store is None:
-            raise HTTPException(status_code=503, detail="Vector store not initialized")
         from storage.vector_store import EmbeddingGenerator
 
         # Generate query embedding
@@ -164,7 +170,7 @@ async def search(request: SearchRequest):
         query_embedding = embedder.embed_text(request.query)
 
         # Search vector store
-        results = main.vector_store.search(
+        results = vector_store.search(
             query_embedding=query_embedding,
             top_k=request.top_k,
             document_ids=request.document_ids,
@@ -190,7 +196,10 @@ async def search(request: SearchRequest):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    rag_pipeline: RAGPipeline = Depends(get_rag_pipeline),
+):
     """
     Chat with conversation history.
 
@@ -198,7 +207,6 @@ async def chat(request: ChatRequest):
     generates responses using the Claude LLM with RAG.
     """
     try:
-        rag_pipeline = get_rag_pipeline()
         # For now, treat chat similarly to query but with history context
         # Build context from history if provided
         history_context = ""

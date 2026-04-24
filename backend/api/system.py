@@ -1,26 +1,29 @@
 """System API routes."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
 
+from api.dependencies import get_document_store, get_vector_store
 from config import settings
-import main
+from storage.document_store import DocumentStore
+from storage.vector_store import VectorStore
 
 router = APIRouter()
 
 
 @router.get("/stats")
-async def get_stats():
+async def get_stats(
+    document_store: DocumentStore = Depends(get_document_store),
+    vector_store: VectorStore = Depends(get_vector_store),
+):
     """Get system statistics."""
-    if main.document_store is None or main.vector_store is None:
-        raise HTTPException(status_code=503, detail="Stores not initialized")
-    status_counts = main.document_store.count_by_status()
+    status_counts = document_store.count_by_status()
 
     return {
         "documents": {
-            "total": main.document_store.count(),
+            "total": document_store.count(),
             "by_status": status_counts,
         },
         "chunks": {
-            "total": main.vector_store.get_chunk_count(),
+            "total": vector_store.get_chunk_count(),
         },
         "storage": {
             "vector_db_path": str(settings.VECTOR_DB_PATH),

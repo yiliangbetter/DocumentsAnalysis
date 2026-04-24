@@ -38,6 +38,9 @@ async def lifespan(app: FastAPI):
     document_store = DocumentStore()
     vector_store = VectorStore()
     graph_store = GraphStore()
+    app.state.document_store = document_store
+    app.state.vector_store = vector_store
+    app.state.graph_store = graph_store
     print(f"Loaded {document_store.count()} documents")
     print(f"Vector store contains {vector_store.get_chunk_count()} chunks")
     print(f"Graph store contains {graph_store.get_stats()['documents_indexed']} indexed documents")

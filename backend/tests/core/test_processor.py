@@ -1,4 +1,6 @@
 """Tests for document processor module."""
+import multiprocessing
+
 import pytest
 from io import BytesIO
 from pathlib import Path
@@ -6,6 +8,13 @@ from unittest.mock import MagicMock, patch
 
 from core.document import DocumentMetadata, DocumentType, ProcessingStatus
 from core.document_processor import DocumentProcessor, get_document_type
+
+
+def _build_chunks_in_subprocess(text: str, queue: multiprocessing.Queue) -> None:
+    """Run chunk creation in a subprocess for hang detection."""
+    processor = DocumentProcessor()
+    chunks = processor._create_chunks(text, "test-doc-id")
+    queue.put((len(chunks), chunks[-1].end_char if chunks else 0))
 
 
 class TestGetDocumentType:
@@ -184,6 +193,26 @@ class TestDocumentProcessorChunking:
         assert "entities" in metadata
         assert "entity_confidence" in metadata
         assert "Alice" in metadata["entities"]
+
+    def test_chunking_completes_when_end_reaches_text_length(self):
+        """Regression: chunking should terminate instead of looping on final overlap."""
+        text = ("This is a sentence with many words. " * 120).strip()
+        queue: multiprocessing.Queue = multiprocessing.Queue()
+        process = multiprocessing.Process(
+            target=_build_chunks_in_subprocess,
+            args=(text, queue),
+        )
+        process.start()
+        process.join(timeout=3)
+
+        if process.is_alive():
+            process.terminate()
+            process.join()
+            pytest.fail("Chunk creation hung when reaching final chunk overlap")
+
+        chunk_count, last_end_char = queue.get(timeout=1)
+        assert chunk_count > 1
+        assert last_end_char == len(text)
 
 
 class TestDocumentProcessorExtractText:

@@ -1,15 +1,25 @@
 """Tests for query API routes."""
 from unittest.mock import MagicMock, patch
 
+from api.query import get_rag_pipeline
+
+
+def _override_rag_pipeline(test_client, pipeline):
+    test_client.app.dependency_overrides[get_rag_pipeline] = lambda: pipeline
+
+
+def _clear_override(test_client):
+    test_client.app.dependency_overrides.pop(get_rag_pipeline, None)
+
 
 class TestQueryEndpoint:
     """Test cases for /api/query endpoint."""
 
     def test_query_success(self, test_client, mock_kimi_client):
         """Test successful query with valid data."""
-        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
-            mock_pipeline = MagicMock()
-            mock_get_pipeline.return_value = mock_pipeline
+        mock_pipeline = MagicMock()
+        _override_rag_pipeline(test_client, mock_pipeline)
+        try:
             mock_pipeline.query.return_value = {
                 "answer": "Test answer",
                 "sources": [
@@ -33,6 +43,8 @@ class TestQueryEndpoint:
             assert data["answer"] == "Test answer"
             assert len(data["sources"]) == 1
             assert data["confidence"] == 0.95
+        finally:
+            _clear_override(test_client)
 
     def test_query_missing_question(self, test_client):
         """Test query without question field."""
@@ -54,9 +66,9 @@ class TestQueryEndpoint:
 
     def test_query_error_handling(self, test_client):
         """Test error handling in query."""
-        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
-            mock_pipeline = MagicMock()
-            mock_get_pipeline.return_value = mock_pipeline
+        mock_pipeline = MagicMock()
+        _override_rag_pipeline(test_client, mock_pipeline)
+        try:
             mock_pipeline.query.return_value = {
                 "answer": "Error occurred",
                 "sources": [],
@@ -70,12 +82,14 @@ class TestQueryEndpoint:
             )
 
             assert response.status_code == 500
+        finally:
+            _clear_override(test_client)
 
     def test_query_exception_handling(self, test_client):
         """Test exception handling in query."""
-        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
-            mock_pipeline = MagicMock()
-            mock_get_pipeline.return_value = mock_pipeline
+        mock_pipeline = MagicMock()
+        _override_rag_pipeline(test_client, mock_pipeline)
+        try:
             mock_pipeline.query.side_effect = Exception("Unexpected error")
 
             response = test_client.post(
@@ -84,6 +98,8 @@ class TestQueryEndpoint:
             )
 
             assert response.status_code == 500
+        finally:
+            _clear_override(test_client)
 
 
 class TestSearchEndpoint:
@@ -91,30 +107,30 @@ class TestSearchEndpoint:
 
     def test_search_success(self, test_client):
         """Test successful search with valid data."""
-        with patch("main.vector_store") as mock_store:
-            with patch("storage.vector_store.EmbeddingGenerator") as mock_embedder:
-                mock_instance = MagicMock()
-                mock_instance.embed_text.return_value = [0.1] * 384
-                mock_embedder.return_value = mock_instance
+        mock_store = test_client.app.state.vector_store
+        with patch("storage.vector_store.EmbeddingGenerator") as mock_embedder:
+            mock_instance = MagicMock()
+            mock_instance.embed_text.return_value = [0.1] * 384
+            mock_embedder.return_value = mock_instance
 
-                mock_store.search.return_value = [
-                    ("chunk-1", 0.95, "Test result 1"),
-                    ("chunk-2", 0.85, "Test result 2"),
-                ]
+            mock_store.search.return_value = [
+                ("chunk-1", 0.95, "Test result 1"),
+                ("chunk-2", 0.85, "Test result 2"),
+            ]
 
-                response = test_client.post(
-                    "/api/search",
-                    json={
-                        "query": "test query",
-                        "top_k": 5,
-                        "document_ids": ["doc-1"],
-                    },
-                )
+            response = test_client.post(
+                "/api/search",
+                json={
+                    "query": "test query",
+                    "top_k": 5,
+                    "document_ids": ["doc-1"],
+                },
+            )
 
-                assert response.status_code == 200
-                data = response.json()
-                assert data["total"] == 2
-                assert len(data["results"]) == 2
+            assert response.status_code == 200
+            data = response.json()
+            assert data["total"] == 2
+            assert len(data["results"]) == 2
 
     def test_search_missing_query(self, test_client):
         """Test search without query field."""
@@ -154,9 +170,9 @@ class TestChatEndpoint:
 
     def test_chat_success(self, test_client):
         """Test successful chat with valid data."""
-        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
-            mock_pipeline = MagicMock()
-            mock_get_pipeline.return_value = mock_pipeline
+        mock_pipeline = MagicMock()
+        _override_rag_pipeline(test_client, mock_pipeline)
+        try:
             mock_pipeline.query.return_value = {
                 "answer": "Chat response",
                 "sources": [
@@ -179,12 +195,14 @@ class TestChatEndpoint:
             data = response.json()
             assert data["message"] == "Chat response"
             assert len(data["sources"]) == 1
+        finally:
+            _clear_override(test_client)
 
     def test_chat_with_history(self, test_client):
         """Test chat with history."""
-        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
-            mock_pipeline = MagicMock()
-            mock_get_pipeline.return_value = mock_pipeline
+        mock_pipeline = MagicMock()
+        _override_rag_pipeline(test_client, mock_pipeline)
+        try:
             mock_pipeline.query.return_value = {
                 "answer": "Follow-up response",
                 "sources": [],
@@ -204,6 +222,8 @@ class TestChatEndpoint:
             )
 
             assert response.status_code == 200
+        finally:
+            _clear_override(test_client)
 
     def test_chat_missing_message(self, test_client):
         """Test chat without message field."""
@@ -225,9 +245,9 @@ class TestChatEndpoint:
 
     def test_chat_error_handling(self, test_client):
         """Test error handling in chat."""
-        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
-            mock_pipeline = MagicMock()
-            mock_get_pipeline.return_value = mock_pipeline
+        mock_pipeline = MagicMock()
+        _override_rag_pipeline(test_client, mock_pipeline)
+        try:
             mock_pipeline.query.side_effect = Exception("Pipeline error")
 
             response = test_client.post(
@@ -236,3 +256,5 @@ class TestChatEndpoint:
             )
 
             assert response.status_code == 500
+        finally:
+            _clear_override(test_client)

@@ -239,14 +239,23 @@ def mock_embedding_model():
 def test_client(test_settings):
     """Create a FastAPI test client."""
     with patch("config.settings", test_settings):
-        with patch("main.document_store") as mock_doc_store:
-            with patch("main.vector_store") as mock_vec_store:
-                # Setup mock stores
-                mock_doc_store.count.return_value = 0
-                mock_vec_store.get_chunk_count.return_value = 0
+        with patch("core.rag.settings.KIMI_API_KEY", test_settings.KIMI_API_KEY):
+            with patch("core.rag.settings.KIMI_BASE_URL", test_settings.KIMI_BASE_URL):
+                with patch("main.document_store") as mock_doc_store:
+                    with patch("main.vector_store") as mock_vec_store:
+                        with patch("main.graph_store") as mock_graph_store:
+                            # Setup mock stores
+                            mock_doc_store.count.return_value = 0
+                            mock_doc_store.get_all.return_value = []
+                            mock_vec_store.get_chunk_count.return_value = 0
+                            mock_graph_store.get_stats.return_value = {"documents_indexed": 0}
 
-                client = TestClient(app)
-                yield client
+                            app.state.document_store = mock_doc_store
+                            app.state.vector_store = mock_vec_store
+                            app.state.graph_store = mock_graph_store
+
+                            client = TestClient(app)
+                            yield client
 
 
 # Factory fixtures for generating test data
