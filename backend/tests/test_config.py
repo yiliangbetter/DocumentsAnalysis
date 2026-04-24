@@ -19,7 +19,7 @@ class TestSettings:
         assert settings.PORT == 8000
         assert settings.DEBUG is False
         assert settings.LOG_LEVEL == "info"
-        assert settings.LLM_MODEL == "claude-3-sonnet-20240229"
+        assert settings.LLM_MODEL == "kimi-k2.5"
         assert settings.CHUNK_SIZE == 512
         assert settings.CHUNK_OVERLAP == 50
         assert settings.EMBEDDING_DIMENSION == 384

@@ -1,13 +1,13 @@
 """Tests for documents API routes."""
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
+from config import settings
 from core.document import Document, DocumentMetadata, DocumentType, ProcessingStatus
 
 
@@ -25,7 +25,7 @@ class TestListDocuments:
 
     def test_with_documents(self, test_client, sample_document):
         """Test listing documents with data."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get_all.return_value = [sample_document]
             mock_store.count.return_value = 1
 
@@ -39,7 +39,7 @@ class TestListDocuments:
 
     def test_pagination(self, test_client):
         """Test document pagination."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             # Create multiple documents
             docs = [
                 Document(
@@ -63,7 +63,7 @@ class TestListDocuments:
 
     def test_filter_by_status(self, test_client, sample_document):
         """Test filtering documents by status."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get_all.return_value = [sample_document]
             mock_store.count.return_value = 1
 
@@ -73,7 +73,7 @@ class TestListDocuments:
 
     def test_filter_by_type(self, test_client, sample_document):
         """Test filtering documents by type."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get_all.return_value = [sample_document]
             mock_store.count.return_value = 1
 
@@ -101,8 +101,8 @@ class TestUploadDocument:
                 [MagicMock()],
             )
 
-            with patch("api.documents.document_store"):
-                with patch("api.documents.vector_store"):
+            with patch("main.document_store"):
+                with patch("main.vector_store"):
                     with patch("storage.vector_store.EmbeddingGenerator"):
                         response = test_client.post("/api/documents/", files=files)
 
@@ -122,7 +122,7 @@ class TestUploadDocument:
 
         response = test_client.post("/api/documents/", files=files)
 
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_upload_unsupported_type(self, test_client):
         """Test uploading unsupported file type."""
@@ -153,8 +153,8 @@ class TestUploadDocument:
                 [MagicMock()],
             )
 
-            with patch("api.documents.document_store"):
-                with patch("api.documents.vector_store"):
+            with patch("main.document_store"):
+                with patch("main.vector_store"):
                     with patch("storage.vector_store.EmbeddingGenerator"):
                         response = test_client.post(
                             "/api/documents/",
@@ -170,7 +170,7 @@ class TestGetDocument:
 
     def test_get_existing_document(self, test_client, sample_document):
         """Test getting an existing document."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get.return_value = sample_document
 
             response = test_client.get(f"/api/documents/{sample_document.id}")
@@ -182,7 +182,7 @@ class TestGetDocument:
 
     def test_get_nonexistent_document(self, test_client):
         """Test getting a non-existent document."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get.return_value = None
 
             response = test_client.get("/api/documents/nonexistent-id")
@@ -195,11 +195,11 @@ class TestDeleteDocument:
 
     def test_delete_existing_document(self, test_client, sample_document):
         """Test deleting an existing document."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get.return_value = sample_document
             mock_store.delete.return_value = True
 
-            with patch("api.documents.vector_store") as mock_vector:
+            with patch("main.vector_store") as mock_vector:
                 mock_vector.delete_by_document_id.return_value = 5
 
                 response = test_client.delete(f"/api/documents/{sample_document.id}")
@@ -208,7 +208,7 @@ class TestDeleteDocument:
 
     def test_delete_nonexistent_document(self, test_client):
         """Test deleting a non-existent document."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get.return_value = None
 
             response = test_client.delete("/api/documents/nonexistent-id")
@@ -221,30 +221,21 @@ class TestDownloadDocument:
 
     def test_download_existing_document(self, test_client, sample_document):
         """Test downloading an existing document."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get.return_value = sample_document
 
-            # Create temporary file
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-                f.write(b"PDF content")
-                temp_path = f.name
-
-            with patch("pathlib.Path.exists") as mock_exists:
-                mock_exists.return_value = True
-
-                # Note: FileResponse is tricky to test in unit tests
-                # This test just verifies the endpoint doesn't error
-                try:
-                    response = test_client.get(f"/api/documents/{sample_document.id}/download")
-                    # Should not be 404 since document exists
-                    assert response.status_code != 404
-                finally:
-                    # Cleanup
-                    Path(temp_path).unlink(missing_ok=True)
+            file_storage_path = settings.FILE_STORAGE_PATH / f"{sample_document.id}.pdf"
+            file_storage_path.parent.mkdir(parents=True, exist_ok=True)
+            file_storage_path.write_bytes(b"PDF content")
+            try:
+                response = test_client.get(f"/api/documents/{sample_document.id}/download")
+                assert response.status_code == 200
+            finally:
+                file_storage_path.unlink(missing_ok=True)
 
     def test_download_nonexistent_document(self, test_client):
         """Test downloading a non-existent document."""
-        with patch("api.documents.document_store") as mock_store:
+        with patch("main.document_store") as mock_store:
             mock_store.get.return_value = None
 
             response = test_client.get("/api/documents/nonexistent-id/download")

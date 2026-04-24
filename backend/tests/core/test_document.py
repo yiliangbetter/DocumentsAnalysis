@@ -11,8 +11,8 @@ from core.document import (
     DocumentMetadata,
     DocumentType,
     ProcessingStatus,
-    get_document_type,
 )
+from core.document_processor import get_document_type
 
 
 class TestDocumentType:

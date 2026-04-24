@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from core.document import DocumentMetadata, DocumentType, ProcessingStatus
-from core.processor import DocumentProcessor, get_document_type
+from core.document_processor import DocumentProcessor, get_document_type
 
 
 class TestGetDocumentType:
@@ -48,7 +48,7 @@ class TestDocumentProcessorInit:
         assert processor.chunk_size == 512
         assert processor.chunk_overlap == 50
 
-    @patch("core.processor.settings")
+    @patch("core.document_processor.settings")
     def test_custom_settings(self, mock_settings):
         """Test processor uses custom settings."""
         mock_settings.CHUNK_SIZE = 1024
@@ -199,7 +199,7 @@ class TestDocumentProcessorExtractText:
         text = "Hello, World! Testing text extraction."
         content = text.encode("utf-8")
 
-        extracted_text, metadata = processor._extract_text(content, DocumentType.TXT)
+        extracted_text, metadata = processor._extract_text(content)
 
         assert extracted_text == text
         assert metadata.word_count == len(text.split())
@@ -210,7 +210,7 @@ class TestDocumentProcessorExtractText:
         text = "Hëllö, Wörld!"
         content = text.encode("latin-1")
 
-        extracted_text, metadata = processor._extract_text(content, DocumentType.TXT)
+        extracted_text, metadata = processor._extract_text(content)
 
         assert extracted_text == text
 
@@ -218,7 +218,7 @@ class TestDocumentProcessorExtractText:
         """Test extracting empty text content."""
         content = b""
 
-        extracted_text, metadata = processor._extract_text(content, DocumentType.TXT)
+        extracted_text, metadata = processor._extract_text(content)
 
         assert extracted_text == ""
         assert metadata.word_count == 0

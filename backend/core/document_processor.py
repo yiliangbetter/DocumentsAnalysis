@@ -208,6 +208,9 @@ class DocumentProcessor:
                 chunks.append(chunk)
                 chunk_index += 1
 
+            if end >= text_length:
+                break
+
             # Move start with overlap
             start = end - self.chunk_overlap
             if start >= end:

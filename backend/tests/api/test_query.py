@@ -1,13 +1,5 @@
 """Tests for query API routes."""
-from datetime import datetime
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
-
-import pytest
-from fastapi.testclient import TestClient
-
-from core.document import Document, DocumentMetadata, DocumentType, ProcessingStatus
-from storage.vector_store import VectorStore
 
 
 class TestQueryEndpoint:
@@ -15,7 +7,9 @@ class TestQueryEndpoint:
 
     def test_query_success(self, test_client, mock_kimi_client):
         """Test successful query with valid data."""
-        with patch("core.rag.RAGPipeline._generate_answer") as mock_generate:
+        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
+            mock_pipeline = MagicMock()
+            mock_get_pipeline.return_value = mock_pipeline
             mock_pipeline.query.return_value = {
                 "answer": "Test answer",
                 "sources": [
@@ -60,7 +54,9 @@ class TestQueryEndpoint:
 
     def test_query_error_handling(self, test_client):
         """Test error handling in query."""
-        with patch("core.rag.RAGPipeline._generate_answer") as mock_generate:
+        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
+            mock_pipeline = MagicMock()
+            mock_get_pipeline.return_value = mock_pipeline
             mock_pipeline.query.return_value = {
                 "answer": "Error occurred",
                 "sources": [],
@@ -73,13 +69,13 @@ class TestQueryEndpoint:
                 json={"question": "Test question"},
             )
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["answer"] == "Error occurred"
+            assert response.status_code == 500
 
     def test_query_exception_handling(self, test_client):
         """Test exception handling in query."""
-        with patch("core.rag.RAGPipeline._generate_answer") as mock_generate:
+        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
+            mock_pipeline = MagicMock()
+            mock_get_pipeline.return_value = mock_pipeline
             mock_pipeline.query.side_effect = Exception("Unexpected error")
 
             response = test_client.post(
@@ -95,8 +91,8 @@ class TestSearchEndpoint:
 
     def test_search_success(self, test_client):
         """Test successful search with valid data."""
-        with patch("api.query.vector_store") as mock_store:
-            with patch("api.query.EmbeddingGenerator") as mock_embedder:
+        with patch("main.vector_store") as mock_store:
+            with patch("storage.vector_store.EmbeddingGenerator") as mock_embedder:
                 mock_instance = MagicMock()
                 mock_instance.embed_text.return_value = [0.1] * 384
                 mock_embedder.return_value = mock_instance
@@ -140,7 +136,7 @@ class TestSearchEndpoint:
 
     def test_search_error_handling(self, test_client):
         """Test error handling in search."""
-        with patch("api.query.EmbeddingGenerator") as mock_embedder:
+        with patch("storage.vector_store.EmbeddingGenerator") as mock_embedder:
             mock_instance = MagicMock()
             mock_instance.embed_text.side_effect = Exception("Embedding error")
             mock_embedder.return_value = mock_instance
@@ -158,7 +154,9 @@ class TestChatEndpoint:
 
     def test_chat_success(self, test_client):
         """Test successful chat with valid data."""
-        with patch("core.rag.RAGPipeline._generate_answer") as mock_generate:
+        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
+            mock_pipeline = MagicMock()
+            mock_get_pipeline.return_value = mock_pipeline
             mock_pipeline.query.return_value = {
                 "answer": "Chat response",
                 "sources": [
@@ -184,7 +182,9 @@ class TestChatEndpoint:
 
     def test_chat_with_history(self, test_client):
         """Test chat with history."""
-        with patch("core.rag.RAGPipeline._generate_answer") as mock_generate:
+        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
+            mock_pipeline = MagicMock()
+            mock_get_pipeline.return_value = mock_pipeline
             mock_pipeline.query.return_value = {
                 "answer": "Follow-up response",
                 "sources": [],
@@ -225,7 +225,9 @@ class TestChatEndpoint:
 
     def test_chat_error_handling(self, test_client):
         """Test error handling in chat."""
-        with patch("core.rag.RAGPipeline._generate_answer") as mock_generate:
+        with patch("api.query.get_rag_pipeline") as mock_get_pipeline:
+            mock_pipeline = MagicMock()
+            mock_get_pipeline.return_value = mock_pipeline
             mock_pipeline.query.side_effect = Exception("Pipeline error")
 
             response = test_client.post(
