@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     TOP_K_RETRIEVAL: int = 5
     SIMILARITY_THRESHOLD: float = 0.7
     RETRIEVAL_MODE: str = "vector"  # options: vector, hybrid, graph
+    NEO4J_URI: Optional[str] = None
+    NEO4J_USER: Optional[str] = None
+    NEO4J_PASSWORD: Optional[str] = None
+    NEO4J_DATABASE: str = "neo4j"
 
     # Upload Limits
     MAX_FILE_SIZE: int = 104_857_600  # 100MB
